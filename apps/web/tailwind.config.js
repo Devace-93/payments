@@ -1,0 +1,91 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Semantic palette: every shade resolves to a CSS variable so the
+        // dark theme (data-theme="dark" / prefers-color-scheme) can remap the
+        // whole scale in global.css without touching components. `primary`
+        // is the brand violet; `white` is the page surface.
+        white: "rgb(var(--c-white) / <alpha-value>)",
+        slate: {
+          50: "rgb(var(--c-slate-50) / <alpha-value>)",
+          100: "rgb(var(--c-slate-100) / <alpha-value>)",
+          200: "rgb(var(--c-slate-200) / <alpha-value>)",
+          300: "rgb(var(--c-slate-300) / <alpha-value>)",
+          400: "rgb(var(--c-slate-400) / <alpha-value>)",
+          500: "rgb(var(--c-slate-500) / <alpha-value>)",
+          600: "rgb(var(--c-slate-600) / <alpha-value>)",
+          700: "rgb(var(--c-slate-700) / <alpha-value>)",
+          800: "rgb(var(--c-slate-800) / <alpha-value>)",
+          900: "rgb(var(--c-slate-900) / <alpha-value>)",
+          950: "rgb(var(--c-slate-950) / <alpha-value>)",
+        },
+        primary: {
+          50: "rgb(var(--c-primary-50) / <alpha-value>)",
+          100: "rgb(var(--c-primary-100) / <alpha-value>)",
+          200: "rgb(var(--c-primary-200) / <alpha-value>)",
+          300: "rgb(var(--c-primary-300) / <alpha-value>)",
+          400: "rgb(var(--c-primary-400) / <alpha-value>)",
+          500: "rgb(var(--c-primary-500) / <alpha-value>)",
+          600: "rgb(var(--c-primary-600) / <alpha-value>)",
+          700: "rgb(var(--c-primary-700) / <alpha-value>)",
+          800: "rgb(var(--c-primary-800) / <alpha-value>)",
+          900: "rgb(var(--c-primary-900) / <alpha-value>)",
+          950: "rgb(var(--c-primary-950) / <alpha-value>)",
+        },
+        red: {
+          50: "rgb(var(--c-red-50) / <alpha-value>)",
+          100: "rgb(var(--c-red-100) / <alpha-value>)",
+          200: "rgb(var(--c-red-200) / <alpha-value>)",
+          300: "rgb(var(--c-red-300) / <alpha-value>)",
+          400: "rgb(var(--c-red-400) / <alpha-value>)",
+          500: "rgb(var(--c-red-500) / <alpha-value>)",
+          600: "rgb(var(--c-red-600) / <alpha-value>)",
+          700: "rgb(var(--c-red-700) / <alpha-value>)",
+          800: "rgb(var(--c-red-800) / <alpha-value>)",
+          900: "rgb(var(--c-red-900) / <alpha-value>)",
+        },
+        amber: {
+          50: "rgb(var(--c-amber-50) / <alpha-value>)",
+          100: "rgb(var(--c-amber-100) / <alpha-value>)",
+          200: "rgb(var(--c-amber-200) / <alpha-value>)",
+          300: "rgb(var(--c-amber-300) / <alpha-value>)",
+          400: "rgb(var(--c-amber-400) / <alpha-value>)",
+          500: "rgb(var(--c-amber-500) / <alpha-value>)",
+          600: "rgb(var(--c-amber-600) / <alpha-value>)",
+          700: "rgb(var(--c-amber-700) / <alpha-value>)",
+          800: "rgb(var(--c-amber-800) / <alpha-value>)",
+          900: "rgb(var(--c-amber-900) / <alpha-value>)",
+        },
+        green: {
+          50: "rgb(var(--c-green-50) / <alpha-value>)",
+          100: "rgb(var(--c-green-100) / <alpha-value>)",
+          200: "rgb(var(--c-green-200) / <alpha-value>)",
+          300: "rgb(var(--c-green-300) / <alpha-value>)",
+          400: "rgb(var(--c-green-400) / <alpha-value>)",
+          500: "rgb(var(--c-green-500) / <alpha-value>)",
+          600: "rgb(var(--c-green-600) / <alpha-value>)",
+          700: "rgb(var(--c-green-700) / <alpha-value>)",
+          800: "rgb(var(--c-green-800) / <alpha-value>)",
+          900: "rgb(var(--c-green-900) / <alpha-value>)",
+        },
+      },
+      fontFamily: {
+        sans: [
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
+      },
+    },
+  },
+  plugins: [],
+};

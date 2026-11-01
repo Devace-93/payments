@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Qwik / Bun
+node_modules/
+dist/
+server/
+.qwik/
+tmp/
+.vite/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Generated widget bundle (built from packages/session-js by `make widget` / the web Dockerfile)
+apps/web/public/session.js
+
+# Data / build
+*.log
+*.sqlite3
+/data/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Playwright MCP scratch (browser snapshots/console logs)
+.playwright-mcp/
+
+# Playwright e2e suite output (e2e/)
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/

@@ -1,0 +1,19 @@
+{
+  "name": "accounts-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Playwright end-to-end suite for the accounts stack (hosted pages + API + session.js widget + Mailpit).",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:critical": "playwright test --grep @critical",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report playwright-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "22.19.0",
+    "typescript": "5.9.3"
+  }
+}

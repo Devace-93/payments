@@ -1,0 +1,31 @@
+# Build context = repo root for every service. Keep images slim and correct.
+.git
+.gitignore
+*.md
+!packages/shared/**          # keep shared JSON (imported at runtime)
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Node / Qwik / Bun (rebuilt inside the image)
+**/node_modules/
+**/dist/
+apps/web/server/
+apps/web/.qwik/
+**/tmp/
+**/.vite/
+
+# Local env / data
+.env
+.env.*
+!.env.example
+deploy/
+e2e/
+*.log
+.DS_Store

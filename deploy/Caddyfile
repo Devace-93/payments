@@ -1,0 +1,37 @@
+# accounts reverse proxy (local development). Single host on :8085; the
+# production routing lives in the 3m4 edge Caddy (see PRODUCTION.md), with the
+# same rules.
+
+:8085 {
+	# --- API ---
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+
+	# --- Public key set, avatars and the bare health check are served by the
+	# API at the host root (relying apps fetch the JWKS; every app embeds the
+	# avatar URLs).
+	@apiRoot path /.well-known/* /avatars/* /healthz
+	handle @apiRoot {
+		reverse_proxy api:5000
+	}
+
+	# --- Session widget: a static file served by the web service, embedded by
+	# the static 3m4 sites (info, kinegram, bubbles), so it must be cacheable
+	# and CORS-open.
+	@widget path /session.js
+	handle @widget {
+		header {
+			Cache-Control "public, max-age=300"
+			Access-Control-Allow-Origin "*"
+			# defer: replace the upstream Cache-Control instead of adding a second one
+			defer
+		}
+		reverse_proxy web:3000
+	}
+
+	# --- Hosted pages (Qwik SSR) --- everything else.
+	handle {
+		reverse_proxy web:3000
+	}
+}

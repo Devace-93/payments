@@ -1,0 +1,2 @@
+# Test / local tooling on top of requirements.txt (not installed in the image).
+pytest==9.1.1

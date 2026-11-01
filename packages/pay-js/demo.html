@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>session.js demo</title>
+    <style>
+      :root { --accent: #605dff; }
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #f7f7fb; color: #1b1c22; }
+      @media (prefers-color-scheme: dark) { body { background: #0b0c10; color: #e8e9ed; } }
+      header { display: flex; justify-content: space-between; align-items: center; }
+      pre { background: rgba(127,127,127,.12); padding: 1rem; border-radius: 8px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>session.js demo</h1>
+      <div id="session"></div>
+    </header>
+    <p>
+      The widget above talks to the accounts origin the script was loaded from
+      (<code>http://localhost:8085</code> when you open this file through the local stack).
+      Log in there, come back, and it shows your avatar and handle.
+    </p>
+    <pre id="out">waiting for m4session…</pre>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const out = document.getElementById("out");
+        const tick = () => {
+          if (!window.m4session) return setTimeout(tick, 100);
+          window.m4session.onChange((u) => (out.textContent = JSON.stringify(u, null, 2) || "null (signed out)"));
+        };
+        tick();
+      });
+    </script>
+    <!-- Point this at your local stack or the production host. -->
+    <script src="http://localhost:8085/session.js" data-mount="#session" defer></script>
+  </body>
+</html>

@@ -1,0 +1,119 @@
+name: accounts
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: accounts
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-accounts}
+      POSTGRES_DB: accounts
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accounts"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Local mail sink: every verification / magic-link mail lands here.
+  # SMTP on 1025 (SMTP_URL=smtp://mailpit:1025), web UI + JSON API on :8025.
+  # Disabled in production (docker-compose.prod.yml), where Resend delivers.
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+    expose: ["1025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    restart: unless-stopped
+
+  # Creates/upgrades the schema, then exits. Other services wait for it.
+  migrate:
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    command: ["python", "-m", "dbcore.cli", "upgrade"]
+    env_file: ../.env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    env_file: ../.env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    expose: ["5000"]
+    # Also on the shared `edge` network (created by `make up`), so the other
+    # 3m4 stacks running locally can fetch the JWKS at
+    # http://accounts-api-1:5000/.well-known/jwks.json, exactly as in production.
+    networks: [default, edge]
+    restart: unless-stopped
+
+  # Outbox consumer: delivers the mails the API queued (same image as the API).
+  worker:
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    command: ["python", "-m", "dbcore.worker"]
+    env_file: ../.env
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      # VITE_* are inlined at build time. Interpolated from the repo-root .env
+      # (run compose with --env-file ../.env). Override per environment as needed.
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY:-}
+        VITE_POSTHOG_HOST: ${VITE_POSTHOG_HOST:-https://us.i.posthog.com}
+        VITE_INFO_URL: ${VITE_INFO_URL:-https://info.3m4.net}
+        VITE_METRICS_PROJECT_KEY: ${VITE_METRICS_PROJECT_KEY:-}
+        VITE_METRICS_TRACKER_URL: ${VITE_METRICS_TRACKER_URL:-https://metrics.3m4.net/m.js}
+        VITE_RETRO_PROJECT_KEY: ${VITE_RETRO_PROJECT_KEY:-}
+        VITE_RETRO_WIDGET_URL: ${VITE_RETRO_WIDGET_URL:-https://retro.3m4.net/widget.js}
+    env_file: ../.env
+    environment:
+      # SSR resolves the feature switches straight from the API over the internal network.
+      API_INTERNAL_URL: http://api:5000/api
+    expose: ["3000"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [api, web]
+    restart: unless-stopped
+
+networks:
+  edge:
+    external: true
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+  caddyconfig:

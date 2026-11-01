@@ -1,0 +1,28 @@
+# Production overrides. accounts shares the Hetzner box with the 3m4 shortener
+# (and exp, retro, metrics, smart-docs), whose Caddy already owns ports 80/443.
+# accounts therefore runs WITHOUT its own Caddy in production: api, web and
+# worker join the external `edge` network and the 3m4 Caddyfile.prod routes
+# accounts.3m4.net to them by container name (accounts-api-1, accounts-web-1).
+#
+# Mailpit is a development-only sink; production delivers through Resend
+# (SMTP_URL in .env).
+#
+#   docker network create edge            # once per server
+#   cd /opt/accounts/deploy
+#   docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  caddy:
+    profiles: ["disabled"]
+  mailpit:
+    profiles: ["disabled"]
+
+  api:
+    networks: [default, edge]
+  web:
+    networks: [default, edge]
+  worker:
+    networks: [default, edge]
+
+networks:
+  edge:
+    external: true
