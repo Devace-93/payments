@@ -34,6 +34,7 @@ def create_app() -> Flask:
 
     from .blueprints.catalog import bp as catalog_bp
     from .blueprints.checkout import bp as checkout_bp
+    from .blueprints.github_webhook import bp as github_bp
     from .blueprints.me import bp as me_bp
     from .blueprints.public import bp as public_bp
     from .blueprints.service import bp as service_bp
@@ -45,6 +46,7 @@ def create_app() -> Flask:
     app.register_blueprint(me_bp, url_prefix="/api")
     app.register_blueprint(service_bp, url_prefix="/api/v1")
     app.register_blueprint(stripe_bp, url_prefix="/api/stripe")
+    app.register_blueprint(github_bp, url_prefix="/api/github")
     app.register_blueprint(features_bp, url_prefix="/api/features")
     app.register_blueprint(public_bp)
 

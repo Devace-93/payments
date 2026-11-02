@@ -45,7 +45,7 @@ entitlements.
 | `DONATION_MAX_CENTS` | `{"usd":50000,"mxn":1000000,"eur":50000}` | JSON |
 | `CLAIM_CODE_TTL_DAYS` | `90` | |
 | `GITHUB_SPONSORS_URL` | `` | shown as second donate button when set |
-| `GITHUB_WEBHOOK_SECRET` | `` | phase 3 |
+| `GITHUB_WEBHOOK_SECRET` | `` | GitHub Sponsors `sponsorship` webhook secret (§5 GitHub); empty → `503 webhook_not_configured` |
 | `MAXMIND_LICENSE_KEY` | `` | optional; `/api/geo` returns `null` country without it |
 | `MAIL_ENABLED`, `SMTP_URL`, `MAIL_FROM` | as accounts; `MAIL_FROM=3m4 payments <no-reply@3m4.net>` | |
 | `POSTHOG_*`, `POSTHOG_FLAG_PREFIX=payments-`, `FEATURE_FLAG_OVERRIDES` | as accounts | |
@@ -98,13 +98,14 @@ Clients handle `401 session_expired` by `POST {ACCOUNTS_URL}/api/session/refresh
 Auth kinds: **public**; **session** (cookie/bearer, required); **optional
 session**; **service** (`Authorization: Bearer m4pay_sk_<40 chars>`, matched by
 sha256 against `apps.service_key_hash`; the app may only act on its own slug);
-**stripe** (`Stripe-Signature`, `construct_event(request.get_data(), …)`).
+**stripe** (`Stripe-Signature`, `construct_event(request.get_data(), …)`);
+**github** (`X-Hub-Signature-256: sha256=<hmac_sha256(GITHUB_WEBHOOK_SECRET, raw body)>`, constant-time compare).
 
 ### Public
 - `GET /api/catalog?app=retro` → `200 {app:{slug,name,icon,treat}, currencies:["usd","mxn","eur"], default_currency, donation:{presets:{usd:[…]}, min:{usd:200,…}, max:{…}}, products:[{key, kind, entitlement, interval, label, amounts:{usd:500,…}}], github_sponsors_url, fee_hint:bool}`. `Cache-Control: public, max-age=300`. Unknown app → `400 unknown_app`.
 - `GET /api/geo` → `{country:"MX"|null, currency:"mxn"}` from the client IP (X-Forwarded-For first hop). Never errors.
 - `GET /api/fees?amount=500&currency=usd&kind=donation` → `{amount, currency, fee, net_mxn, retention, min_amount}` (fees.py estimate; used for the fee hint).
-- `GET /api/public/supporters?app=retro&limit=50` → `{items:[{display_name, handle|null, tier:"supporter"|"pro"|"team", since:"2026-11", message|null}]}`, max-age 300. Only opted-in rows.
+- `GET /api/public/supporters?app=retro&limit=50` → `{items:[{display_name, handle|null, tier:"supporter"|"pro"|"team", since:"2026-11", message|null, source:"stripe"|"github", url|null, avatar_url|null}]}`, max-age 300. Only opted-in Stripe rows of that app **plus every public, active GitHub sponsor** (not tied to an app; `handle` = GitHub login, `url` = profile). `app=all` merges every app (for info.3m4.net). Higher tiers first, then oldest first.
 - `GET /badge/<handle>.svg`, `GET /badge/<handle>.json`, `GET /badge/u/<identity_id>.svg|.json` → SVG (`image/svg+xml`, `Cache-Control: public, max-age=60, must-revalidate`, `ETag`, CORS `*`) or shields endpoint JSON `{"schemaVersion":1,"label":"3m4","message":"supporter|pro|team|not a supporter","color":"f59e0b|9f9f9f"}`. Always 200. Served by the API at host root.
 - `GET /api/checkout/<id>` (our uuid or `cs_…`) → `{id, status:"created"|"open"|"completed"|"expired", kind, app:{slug,name,icon,treat}, amount, currency, return_to, opener_origin, needs_claim:bool, claimed:bool, entitlements:[…]}`.
 - `GET /healthz`, `GET /api/healthz`.
@@ -129,6 +130,9 @@ Rules: `app` must exist and be active; `return_to` passes `safe_return_to` **and
 ### Service (app backends)
 - `GET /api/v1/entitlements/<identity_id>?app=retro` → same body as above. `403 forbidden` if `app` ≠ the key's app.
 - `GET /api/v1/subscriptions?app=retro&updated_since=<iso>&cursor=` → `{items:[…], next_cursor}`.
+
+### GitHub (`X-Hub-Signature-256`)
+- `POST /api/github/sponsors` — GitHub Sponsors webhook (content type JSON). `X-GitHub-Event: ping` → `200 {status:"pong"}`; events other than `sponsorship` → `200 {status:"ignored"}`. Deduped on `X-GitHub-Delivery` (insert-first in `github_events`, `200 {status:"duplicate"}`). Upserts `github_sponsors` by `sponsorship.sponsor.login`: `created` → `status=active` (one-time tiers set `one_time=true` and never cancel); `cancelled` → `status=cancelled` + `ended_at` (unknown login → ignored); `edited` / `tier_changed` / `pending_cancellation` / `pending_tier_change` → refresh name, avatar, tier and `privacy_level` (a pending cancellation stays active until `cancelled`). Only `privacy_level=public` rows are listed. Bad signature → `400 invalid_signature`; no secret → `503 webhook_not_configured`; handler error → `500 handler_error` (row `status=error`, redelivery allowed). Never rate-limited.
 
 ### Stripe
 - `POST /api/stripe/webhook` — limiter exempt. Insert `stripe_events` first (duplicate → `200 {"status":"duplicate"}`), then handle; always re-`retrieve` the object. Handled: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`. Anything else → `200 {"status":"ignored"}`.
@@ -195,7 +199,11 @@ Success page posts `{type:"m4pay:complete", kind, app, entitlements}` to
 <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="subscribe"
         data-price="pro_monthly" data-return-to="https://retro.3m4.net/dashboard/billing" defer></script>
 ```
-One button per tag (`data-mount` or inserted after the script). The button mounts only when `GET /api/features` (credentials) says the matching switch is on for the viewer. Opens
+```html
+<script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="supporters"
+        data-limit="24" data-label="Thanks to our supporters" data-mount="#supporters" defer></script>
+```
+One button per tag (`data-mount` or inserted after the script). The button mounts only when `GET /api/features` (credentials) says the matching switch is on for the viewer. `data-kind="supporters"` is different: it renders the app's public supporters (`GET /api/public/supporters?app=&limit=`, Stripe + GitHub) as a row of chips (avatar or initial, name, link to the GitHub profile when present, `title` = message) under a title (`data-label`, else en/es "Thanks to our supporters"); it is not gated and renders **nothing** while the list is empty. `window.m4pay.supporters(app, limit)` exposes the same fetch. Opens
 `window.open(url, "m4pay", "popup,width=480,height=780")`; popup blocked →
 `location.assign(url)`. Accepts `message` events only from the payments origin
 and `data.type === "m4pay:complete"`; dispatches `window` CustomEvent

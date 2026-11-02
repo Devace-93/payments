@@ -228,6 +228,48 @@ class ClaimCode(Base):
     created_at: Mapped[datetime] = _ts()
 
 
+class GithubSponsor(Base):
+    """One row per GitHub login that sponsored Enrique through GitHub Sponsors
+    (``POST /api/github/sponsors``). ``privacy_level`` is GitHub's: only
+    ``public`` rows reach the supporters list. One-time sponsorships stay
+    ``active`` for good (like a donation); monthly ones flip to ``cancelled``
+    on the ``cancelled`` action."""
+
+    __tablename__ = "github_sponsors"
+    __table_args__ = (Index("ix_github_sponsors_status_privacy", "status", "privacy_level"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    login: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    node_id: Mapped[str | None] = mapped_column(String(64))
+    name: Mapped[str | None] = mapped_column(String(80))
+    avatar_url: Mapped[str | None] = mapped_column(String(500))
+    html_url: Mapped[str | None] = mapped_column(String(500))
+    tier_name: Mapped[str | None] = mapped_column(String(120))
+    monthly_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    one_time: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    privacy_level: Mapped[str] = mapped_column(String(10), nullable=False, default="public", server_default="public")
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="active", server_default="active")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    raw: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    created_at: Mapped[datetime] = _ts()
+    updated_at: Mapped[datetime] = _ts(onupdate=func.now())
+
+
+class GithubEvent(Base):
+    """Insert-first dedupe of GitHub webhook deliveries (``X-GitHub-Delivery``)."""
+
+    __tablename__ = "github_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event: Mapped[str] = mapped_column(String(40), nullable=False)
+    action: Mapped[str | None] = mapped_column(String(40))
+    received_at: Mapped[datetime] = _ts()
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="received", server_default="received")
+    error: Mapped[str | None] = mapped_column(Text)
+
+
 class StripeEvent(Base):
     """Insert-first dedupe of Stripe webhook deliveries."""
 

@@ -232,3 +232,21 @@ BASE_URL=https://payments.3m4.net sh deploy/smoke.sh
   `up -d api worker`, revoke the old one. Webhook secret: roll it in the
   Dashboard (Stripe keeps the old one valid for the chosen window), swap
   `STRIPE_WEBHOOK_SECRET`, restart `api`.
+
+## GitHub Sponsors webhook (supporters list)
+
+Public GitHub sponsors appear in every app's supporters list through
+`POST /api/github/sponsors` (CONTRACT.md §5 "GitHub"). One-time setup:
+
+1. Generate a secret and put it in `/opt/payments/.env` as `GITHUB_WEBHOOK_SECRET`
+   (the scratchpad script `payments-github-webhook-secret.sh` does this, restarts
+   the api and copies the secret to the clipboard without printing it).
+2. https://github.com/sponsors/Devace-93/dashboard/webhooks → **Add webhook**:
+   Payload URL `https://payments.3m4.net/api/github/sponsors`, Content type
+   `application/json`, Secret = the generated one, Active. GitHub sends a `ping`
+   (answered `{"status":"pong"}`); the "Recent deliveries" tab shows it.
+3. Existing sponsors are not replayed by GitHub: redeliver their `created`
+   events from the webhook's deliveries tab, or wait for the next event.
+
+Only `privacy_level=public` sponsorships are listed; private ones are stored
+but hidden. Deliveries are deduped on `X-GitHub-Delivery` (`github_events`).
