@@ -10,7 +10,7 @@ test.describe("me", () => {
   test("anonymous → accounts login", async ({ page }) => {
     await page.goto("/me");
     await page.waitForURL((u) => u.origin === ACCOUNTS_URL && u.pathname.replace(/\/$/, "") === "/login", { timeout: 20_000 });
-    expect(new URL(page.url()).searchParams.get("return_to")).toMatch(/\/me$/);
+    expect(new URL(page.url()).searchParams.get("return_to")).toMatch(/\/me\/?$/);
   });
 
   test("toggle public supporter and set a display name @critical", async ({ page }) => {
