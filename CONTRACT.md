@@ -218,3 +218,50 @@ Templates (`dbcore/mail_templates.py`, en/es): `donation_receipt` (amount, app,
 optional claim code + link), `subscription_started`, `subscription_cancelled`,
 `payment_failed`. Enqueued via `enqueue_mail(session, *, template, to, lang,
 params)`. Stripe's own receipts stay enabled in the Dashboard.
+
+## 13. Backend notes (implementation, 2026-11-01)
+
+Additive details the sections above leave open; everything else is as
+specified.
+
+- `GET /api/checkout/<id>` also returns `email` (the payer's e-mail once the
+  payment landed, else `null`). `status` is `created` only between the row
+  insert and the Stripe call; the web will normally see `open` → `completed`
+  (or `expired`). With a real key, a poll after 20 s re-`retrieve`s the Stripe
+  session and completes it inline if the webhook has not landed yet.
+- `GET /api/fees` returns, besides `{amount, currency, fee, net_mxn,
+  retention, min_amount}`, the breakdown `fee_mxn`, `tax_mxn`, `isr_mxn`,
+  `gross_mxn`. `fee` = Stripe fee + IVA in MXN.
+- `GET /api/me` payments carry `amount_refunded`, `claimed_at` and
+  `display_name` too; subscriptions carry `id` and `app`. `badge` is `null`
+  when the `badges` flag is off. `GET /api/me/customer` returns only
+  `{customer}` (cheap read for the currency selector). `GET /api/features`
+  returns `{features: {key: bool}}` for the pages (as in accounts).
+- `POST /api/checkout` with a *subscription* and an expired cookie answers
+  `401 session_expired` (so the client refreshes and retries); with no cookie
+  at all `401 no_session`. A stale cookie on a *donation* is ignored (guest
+  flow). A disabled flag answers `403 feature_disabled`. `return_to` must be
+  absolute and on the app's origins (no root-relative paths); `origin` must
+  match both `ALLOWED_ORIGINS` and the app's origins. Stripe `locale` is
+  `es-419` for any Spanish except `es-ES`.
+- `POST /api/stripe/webhook`: a handler failure answers `500 handler_failed`
+  (Stripe retries; the retry is allowed through, only processed events are
+  `duplicate`). With an empty `STRIPE_WEBHOOK_SECRET` the endpoint accepts the
+  raw JSON **only** in fake-Stripe mode (503 `webhook_not_configured`
+  otherwise). Subscription events older than the newest applied one (by the
+  event's `created`) answer `{"status":"stale"}`.
+- `customers.lang` mirrors the language of the last checkout, so
+  `payment_failed` / `subscription_cancelled` mails use it.
+- Service keys are `m4pay_sk_` + 40 url-safe chars; webhook secrets
+  `whsec_m4pay_…` (both printed once by `cli app-key <slug> [webhook_url]`).
+  Service endpoints answer `401 unauthorized` for a missing/bad key.
+- `GET /api/v1/subscriptions` items: `{id, app, identity_id, email,
+  entitlement, status, current_period_end, cancel_at_period_end, label,
+  entitlements, updated_at}`; pages of 100, opaque `cursor`.
+- Supporters list: a row needs `customers.public_supporter=true` **and**
+  (a `public` paid payment or an entitled subscription); guest donations with
+  `public=true` are listed under their `display_name` with `handle: null`.
+  Tier for the list and the badge: `team` > `pro` (entitlement names) >
+  `supporter` (any other entitled subscription or paid donation).
+- Fake Stripe: `GET /api/checkout/<id>` never auto-completes; only
+  `cli seed-completed <cs_id>` (or a signed webhook) does.

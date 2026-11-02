@@ -3,10 +3,12 @@ enforces ``Content-Type: application/json`` on state-changing endpoints."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 from flask import request
 
-from dbcore.tokens import avatar_url
+from dbcore.config import config
+from dbcore.entitlements import serialize_subscription as _serialize_subscription
 
 from .errors import ApiError
 
@@ -33,31 +35,59 @@ def json_body() -> dict:
     return data
 
 
-def serialize_user(user) -> dict:
+def serialize_identity(claims: dict) -> dict:
     return {
-        "id": str(user.id),
-        "email": user.email,
-        "email_verified": user.email_verified_at is not None,
-        "handle": user.handle,
-        "name": user.name,
-        "avatar_url": avatar_url(user.id, user.avatar_version),
-        "created_at": iso(user.created_at),
+        "id": claims.get("sub"),
+        "email": claims.get("email"),
+        "handle": claims.get("handle"),
+        "name": claims.get("name"),
     }
 
 
-def serialize_identity(identity) -> dict:
+def serialize_customer(customer) -> dict:
     return {
-        "provider": identity.provider,
-        "provider_email": identity.provider_email,
-        "created_at": iso(identity.created_at),
+        "has_stripe_customer": bool(customer.stripe_customer_id),
+        "public_supporter": bool(customer.public_supporter),
+        "display_name": customer.display_name,
+        "preferred_currency": customer.preferred_currency,
     }
 
 
-def serialize_session_row(row, current_sid) -> dict:
+def serialize_payment(payment, app_slug: str | None) -> dict:
     return {
-        "id": str(row.id),
-        "current": str(row.id) == str(current_sid),
-        "user_agent": row.user_agent,
-        "created_at": iso(row.created_at),
-        "last_seen_at": iso(row.last_seen_at),
+        "id": str(payment.id),
+        "app": app_slug,
+        "kind": payment.kind,
+        "amount": payment.amount,
+        "currency": payment.currency,
+        "amount_refunded": payment.amount_refunded,
+        "status": payment.status,
+        "created_at": iso(payment.created_at),
+        "claimed_at": iso(payment.claimed_at),
+        "public": bool(payment.public),
+        "display_name": payment.display_name,
+        "message": payment.message,
+    }
+
+
+def serialize_subscription(sub, app_slug: str | None, label: str | None) -> dict:
+    out = _serialize_subscription(sub, label=label or "") or {}
+    out["app"] = app_slug
+    return out
+
+
+def badge_links(identity_id: str, handle: str | None) -> dict:
+    base = config.payments_url
+    slug = handle or f"u/{identity_id}"
+    svg_url = f"{base}/badge/{slug}.svg"
+    json_url = f"{base}/badge/{slug}.json"
+    stable_svg_url = f"{base}/badge/u/{identity_id}.svg"
+    link = f"{base}/?ref=badge"
+    return {
+        "svg_url": svg_url,
+        "json_url": json_url,
+        "stable_svg_url": stable_svg_url,
+        "markdown": f"[![3m4 supporter]({svg_url})]({link})",
+        "html": f'<a href="{link}"><img src="{svg_url}" alt="3m4 supporter" height="20"></a>',
+        "shields_url": f"https://img.shields.io/endpoint?url={quote(json_url, safe='')}",
     }

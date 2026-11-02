@@ -3,8 +3,8 @@ import { tr, useI18n } from "../i18n";
 
 /**
  * Full-page "we're building" curtain, shown when the `site-building` feature
- * is ON (see routes/layout.tsx). The API, the JWKS, the avatars and
- * session.js keep answering — only the hosted pages are curtained.
+ * is ON (see routes/layout.tsx). The API, the badges and pay.js keep
+ * answering — only the hosted pages are curtained.
  */
 export const BuildingState = component$(() => {
   const i18n = useI18n();
@@ -35,11 +35,11 @@ export const BuildingState = component$(() => {
           <path d="M186 96c0 5-6 5-6 0" stroke="#64748b" stroke-width="2" fill="none" />
           {/* hanging badge */}
           <g>
-            <rect x="148" y="100" width="76" height="34" rx="8" fill="#4f46e5" />
-            <circle cx="164" cy="113" r="4" fill="#ffffff" />
-            <path d="M157 125c0-4 3.2-6.5 7-6.5s7 2.5 7 6.5" fill="#ffffff" fill-opacity="0.85" />
-            <text x="200" y="122" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="12" font-weight="700" fill="#ffffff">
-              accounts
+            <rect x="148" y="100" width="76" height="34" rx="8" fill="#f59e0b" />
+            <path d="M158 110h9v4a3.5 3.5 0 0 1-3.5 3.5h-2a3.5 3.5 0 0 1-3.5-3.5z" fill="#1c1917" />
+            <path d="M167 111.5h1a1.8 1.8 0 0 1 0 3.6h-1" stroke="#1c1917" stroke-width="1.4" />
+            <text x="196" y="122" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="12" font-weight="700" fill="#1c1917">
+              payments
             </text>
           </g>
           {/* bricks being laid */}
@@ -57,8 +57,8 @@ export const BuildingState = component$(() => {
             <path d="M109 159h10" stroke="#fff7ed" stroke-width="4" />
           </g>
           {/* sun accent */}
-          <circle cx="242" cy="34" r="12" fill="#eef2ff" stroke="#4f46e5" stroke-width="2.5" />
-          <circle cx="242" cy="34" r="4" fill="#4f46e5" />
+          <circle cx="242" cy="34" r="12" fill="#fffbeb" stroke="#d97706" stroke-width="2.5" />
+          <circle cx="242" cy="34" r="4" fill="#d97706" />
         </svg>
 
         <h1 class="mt-6 text-3xl font-bold tracking-tight text-slate-900">{tr(i18n, "building.title")}</h1>

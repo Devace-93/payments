@@ -1,6 +1,8 @@
 export { RouterHead } from "./router-head";
 export { Logo } from "./logo";
 export { Footer } from "./footer";
-export { PasswordField } from "./password-field";
-export { ProviderButtons } from "./provider-buttons";
-export { UnverifiedBanner } from "./unverified-banner";
+export { LanguagePicker } from "./language-picker";
+export { ThemeToggle } from "./theme-toggle";
+export { BuildingState } from "./building-state";
+export { CurrencySelect } from "./currency-select";
+export { CopyField } from "./copy-field";

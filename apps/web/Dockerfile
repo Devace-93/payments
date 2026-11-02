@@ -1,10 +1,10 @@
-# accounts web (Qwik City SSR on Bun).
+# payments web (Qwik City SSR on Bun).
 #
-# Build context is the REPO ROOT (`/home/enrique/accounts`), because the app
+# Build context is the REPO ROOT (`/home/enrique/payments`), because the app
 # imports the shared feature-flag registry from packages/shared and bundles
-# the session.js widget from packages/session-js.
+# the pay.js widget from packages/pay-js.
 #
-#   docker build -f apps/web/Dockerfile -t accounts-web .
+#   docker build -f apps/web/Dockerfile -t payments-web .
 #
 # In deploy/docker-compose.yml this is:
 #   web: { build: { context: .., dockerfile: apps/web/Dockerfile } }
@@ -13,14 +13,14 @@
 FROM oven/bun:1 AS build
 WORKDIR /repo
 
-# Shared registry (feature switches) is imported by the app.
+# Shared registry (feature switches + catalog) is imported by the app.
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-# session.js widget: bundled into apps/web/public so the web service serves it
-# at /session.js (static file, see CONTRACT.md → session.js widget).
-COPY packages/session-js ./packages/session-js
-WORKDIR /repo/packages/session-js
+# pay.js widget: bundled into apps/web/public so the web service serves it at
+# /pay.js (static file, see CONTRACT.md §10).
+COPY packages/pay-js ./packages/pay-js
+WORKDIR /repo/packages/pay-js
 RUN bun install --frozen-lockfile || bun install
 RUN bun run build
 
@@ -30,9 +30,11 @@ RUN bun install --frozen-lockfile || bun install
 # Build-time public config. Vite inlines VITE_* at build time, so these must be
 # present during `bun run build` (passed via compose build.args from .env). All
 # optional — the app degrades gracefully when unset (PostHog / metrics / retro
-# no-op).
+# no-op; VITE_ACCOUNTS_URL defaults to the local accounts stack).
 ARG VITE_API_URL=/api
 ARG VITE_APP_URL
+ARG VITE_ACCOUNTS_URL=http://localhost:8085
+ARG VITE_GITHUB_SPONSORS_URL
 ARG VITE_POSTHOG_KEY
 ARG VITE_POSTHOG_HOST=https://us.i.posthog.com
 ARG VITE_INFO_URL=https://info.3m4.net
@@ -42,6 +44,8 @@ ARG VITE_RETRO_PROJECT_KEY
 ARG VITE_RETRO_WIDGET_URL=https://retro.3m4.net/widget.js
 ENV VITE_API_URL=$VITE_API_URL \
     VITE_APP_URL=$VITE_APP_URL \
+    VITE_ACCOUNTS_URL=$VITE_ACCOUNTS_URL \
+    VITE_GITHUB_SPONSORS_URL=$VITE_GITHUB_SPONSORS_URL \
     VITE_POSTHOG_KEY=$VITE_POSTHOG_KEY \
     VITE_POSTHOG_HOST=$VITE_POSTHOG_HOST \
     VITE_INFO_URL=$VITE_INFO_URL \

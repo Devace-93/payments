@@ -1,14 +1,14 @@
 /**
- * `return_to` handling (CONTRACT.md → Hosted pages / CSRF-CORS).
+ * `return_to` handling (CONTRACT.md §5 → `safe_return_to`, §10 hosted pages).
  *
  * Every hosted page accepts `?return_to=<url>`. Only URLs on an allowed origin
  * are honoured — this app's own origin, `3m4.net` and any `*.3m4.net` host
  * over https, and `localhost` / `127.0.0.1` on any port over http for local
  * development. Root-relative paths are always fine. Anything else (including
- * protocol-relative `//evil`) falls back to `/profile`, so the pages can never
- * be used as an open redirect.
+ * protocol-relative `//evil`) falls back to `/me`, so the pages can never be
+ * used as an open redirect. (The API additionally checks the app's origins.)
  */
-export const DEFAULT_RETURN = "/profile";
+export const DEFAULT_RETURN = "/me";
 
 function appOrigin(): string | null {
   const configured = import.meta.env.VITE_APP_URL;
@@ -43,6 +43,26 @@ export function isAllowedReturn(value: string): boolean {
 export function readReturnTo(url: URL | { searchParams: URLSearchParams }): string {
   const raw = url.searchParams.get("return_to") || "";
   return isAllowedReturn(raw) ? raw : DEFAULT_RETURN;
+}
+
+/** The raw `return_to` only when it is allowed, else `undefined` (for API bodies). */
+export function readReturnToOrNone(url: URL | { searchParams: URLSearchParams }): string | undefined {
+  const raw = url.searchParams.get("return_to") || "";
+  return isAllowedReturn(raw) ? raw : undefined;
+}
+
+/**
+ * The `origin` query parameter (postMessage target of the opener), accepted
+ * only when it is a plain origin on an allowed host.
+ */
+export function readOrigin(url: URL | { searchParams: URLSearchParams }): string | undefined {
+  const raw = url.searchParams.get("origin") || "";
+  if (!raw || !isAllowedReturn(raw)) return undefined;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Append `return_to` to a local path (dropped when it is the default). */

@@ -1,7 +1,8 @@
 name: Deploy
 
 # Inert until DEPLOY_ENABLED=true (repo variable) and the DEPLOY_HOST /
-# DEPLOY_SSH_KEY secrets are set in the repo.
+# DEPLOY_SSH_KEY secrets are set in the repo. Deploys are serialised (one
+# compose build at a time on the 4 GB box).
 on:
   push:
     branches: [main]
@@ -24,7 +25,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd /opt/accounts
+            cd /opt/payments
             git pull --ff-only
             cd deploy
             docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans

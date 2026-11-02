@@ -1,48 +1,58 @@
-# session.js
+# pay.js
 
-Drop-in login / avatar widget for the static 3m4 apps (info, kinegram,
-bubbles). Zero dependencies, under 4 KB gzipped, served by the accounts web
-service at `https://accounts.3m4.net/session.js`.
+Drop-in donate / subscribe button for the static 3m4 apps (info, kinegram,
+bubbles, the MouseTouch site). Zero dependencies, under 5 KB gzipped, served by
+the payments web service at `https://payments.3m4.net/pay.js` (CORS `*`,
+`max-age=300`). See CONTRACT.md §10.
 
 ```html
-<div id="session"></div>
-<script src="https://accounts.3m4.net/session.js" data-mount="#session" defer></script>
+<!-- one-time donation, default label "Buy me a coffee" / "Invítame un café" -->
+<script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="donate"
+        data-amount="500" data-currency="usd" data-label="Buy me a coffee" data-mount="#support" defer></script>
+
+<!-- subscription (login gate happens on payments; needs a 3m4 account) -->
+<script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="subscribe"
+        data-price="pro_monthly" data-return-to="https://retro.3m4.net/dashboard/billing" defer></script>
 ```
 
-- **Signed out:** `Log in` · `Sign up` links to the hosted pages, with
-  `return_to` set to the current page.
-- **Signed in:** avatar + `@handle`; clicking opens a menu with `Profile` and
-  `Log out`.
-- Without `data-mount` (or when the selector matches nothing) it floats in the
-  top-right corner.
-- Strings follow `localStorage["3m4.lang"]` (en / es, falls back to en); the
-  theme follows `data-theme` on `<html>`, `localStorage["3m4.theme"]` or the
-  system preference; the host's `--accent` CSS variable colours the primary
-  button when defined.
-- The accounts origin is taken from the script's own `src`, so the same tag
-  works against `http://localhost:8085/session.js` in development.
-
-## `window.m4session`
-
-| Member | Does |
+| Attribute | Meaning |
 |---|---|
-| `get(force?)` | `Promise<User \| null>`; cached, re-fetched when the tab becomes visible or with `force` |
-| `onChange(cb)` | calls `cb(user)` now (if known) and on every change; returns an unsubscribe function |
-| `login(returnTo?)` / `signup(returnTo?)` / `profile()` | navigate to the hosted pages |
-| `logout()` | `POST /api/session/logout` with credentials, then notifies |
-| `origin` | the accounts origin the widget talks to |
+| `data-app` | app slug from `packages/shared/catalog.json` (required) |
+| `data-kind` | `donate` (default) or `subscribe` |
+| `data-amount`, `data-currency` | donation preset in minor units (`500` = $5.00) and `usd` / `mxn` / `eur` |
+| `data-price` | product key for `subscribe` (e.g. `pro_monthly`) |
+| `data-label` | button text (default from `3m4.lang`: en / es) |
+| `data-return-to` | where "Back to {app}" goes (default: the current page) |
+| `data-mount` | CSS selector; without it the button is inserted right after the script tag |
+| `data-lang` | forwarded to the donate page (default from `3m4.lang`) |
 
-`User` is `{ id, email, email_verified, handle, name, avatar_url }` (see
-`CONTRACT.md`). Requests go to `GET /api/session` with `credentials: "include"`;
-on `401 session_expired` one `POST /api/session/refresh` is attempted. Nothing
-in here throws into the host page.
+- One button per tag; every tag shares one `window.m4pay = { open, entitlements, origin }`.
+- Click → popup `window.open(url, "m4pay", "popup,width=480,height=780")`; when
+  the popup is blocked the page navigates to the hosted page instead
+  (`return_to` brings the user back).
+- The success page posts `{type:"m4pay:complete", kind, app, entitlements}` to
+  the opener; pay.js accepts it **only from the payments origin** and dispatches
+  `window.dispatchEvent(new CustomEvent("m4pay:paid", { detail }))` with
+  `detail = { kind, app, entitlements, via: "message" | "poll" }`.
+- For `subscribe` it also polls `GET /api/entitlements?app=` (credentials) when
+  the host window regains focus, 10 × 3 s, because COOP can null `window.opener`
+  after the Stripe hop. A change in the entitlement set fires `m4pay:paid` too.
+- Theme follows `data-theme` on `<html>`, `localStorage["3m4.theme"]` or the
+  system preference; the host's `--accent` CSS variable colours the button.
+- Nothing in here throws into the host page.
+
+```js
+window.addEventListener("m4pay:paid", (e) => console.log("paid", e.detail));
+window.m4pay.open({ app: "retro", kind: "donate", amount: 1000, currency: "mxn" });
+```
 
 ## Build
 
 ```bash
 bun install
-bun run build   # → apps/web/public/session.js (gitignored, rebuilt by the web Dockerfile)
+bun run build       # → apps/web/public/pay.js (gitignored, rebuilt by the web Dockerfile)
+bun run typecheck
 ```
 
-`demo.html` is a tiny host page: open it next to a running stack
-(`make up`, http://localhost:8085) to see both states.
+`demo.html` is a host page with one donate and one subscribe button pointing
+at `http://localhost:8086`: open it next to a running stack (`make up`).

@@ -16,18 +16,18 @@
   --c-slate-800: 30 41 59;
   --c-slate-900: 15 23 42;
   --c-slate-950: 2 6 23;
-  /* Brand: Tailwind indigo */
-  --c-primary-50: 238 242 255;
-  --c-primary-100: 224 231 255;
-  --c-primary-200: 199 210 254;
-  --c-primary-300: 165 180 252;
-  --c-primary-400: 129 140 248;
-  --c-primary-500: 99 102 241;
-  --c-primary-600: 79 70 229;
-  --c-primary-700: 67 56 202;
-  --c-primary-800: 55 48 163;
-  --c-primary-900: 49 46 129;
-  --c-primary-950: 30 27 75;
+  /* Brand: Tailwind amber */
+  --c-primary-50: 255 251 235;
+  --c-primary-100: 254 243 199;
+  --c-primary-200: 253 230 138;
+  --c-primary-300: 252 211 77;
+  --c-primary-400: 251 191 36;
+  --c-primary-500: 245 158 11;
+  --c-primary-600: 217 119 6;
+  --c-primary-700: 180 83 9;
+  --c-primary-800: 146 64 14;
+  --c-primary-900: 120 53 15;
+  --c-primary-950: 69 26 3;
   --c-red-50: 254 242 242;
   --c-red-100: 254 226 226;
   --c-red-200: 254 202 202;
@@ -76,17 +76,17 @@
     --c-slate-800: 241 245 249;
     --c-slate-900: 248 250 252;
     --c-slate-950: 255 255 255;
-    --c-primary-50: 30 27 75;
-    --c-primary-100: 49 46 129;
-    --c-primary-200: 55 48 163;
-    --c-primary-300: 67 56 202;
-    --c-primary-400: 99 102 241;
-    --c-primary-500: 129 140 248;
-    --c-primary-600: 99 102 241;
-    --c-primary-700: 129 140 248;
-    --c-primary-800: 165 180 252;
-    --c-primary-900: 199 210 254;
-    --c-primary-950: 224 231 255;
+    --c-primary-50: 69 26 3;
+    --c-primary-100: 120 53 15;
+    --c-primary-200: 146 64 14;
+    --c-primary-300: 180 83 9;
+    --c-primary-400: 245 158 11;
+    --c-primary-500: 251 191 36;
+    --c-primary-600: 245 158 11;
+    --c-primary-700: 251 191 36;
+    --c-primary-800: 252 211 77;
+    --c-primary-900: 253 230 138;
+    --c-primary-950: 254 243 199;
     --c-red-50: 69 10 10;
     --c-red-100: 127 29 29;
     --c-red-200: 153 27 27;
@@ -135,17 +135,17 @@
   --c-slate-800: 241 245 249;
   --c-slate-900: 248 250 252;
   --c-slate-950: 255 255 255;
-  --c-primary-50: 30 27 75;
-  --c-primary-100: 49 46 129;
-  --c-primary-200: 55 48 163;
-  --c-primary-300: 67 56 202;
-  --c-primary-400: 99 102 241;
-  --c-primary-500: 129 140 248;
-  --c-primary-600: 99 102 241;
-  --c-primary-700: 129 140 248;
-  --c-primary-800: 165 180 252;
-  --c-primary-900: 199 210 254;
-  --c-primary-950: 224 231 255;
+  --c-primary-50: 69 26 3;
+  --c-primary-100: 120 53 15;
+  --c-primary-200: 146 64 14;
+  --c-primary-300: 180 83 9;
+  --c-primary-400: 245 158 11;
+  --c-primary-500: 251 191 36;
+  --c-primary-600: 245 158 11;
+  --c-primary-700: 251 191 36;
+  --c-primary-800: 252 211 77;
+  --c-primary-900: 253 230 138;
+  --c-primary-950: 254 243 199;
   --c-red-50: 69 10 10;
   --c-red-100: 127 29 29;
   --c-red-200: 153 27 27;
@@ -196,7 +196,7 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700;
+    @apply btn bg-primary-500 text-[#1c1917] hover:bg-primary-600;
   }
   .btn-secondary {
     @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;

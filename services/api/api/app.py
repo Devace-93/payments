@@ -5,14 +5,12 @@
     gunicorn -b 0.0.0.0:5000 -w 2 'api.app:create_app()'
 
 Responsibilities here: credentialed CORS against ``ALLOWED_ORIGINS`` (checked
-per request, so wildcard patterns work), the request size cap (avatars up to
-2 MB), rate limiting, the OAuth client registry, the signed cookie that
-carries OAuth state, blueprint registration, health checks and the error
-handlers that always emit the ``{"error": {...}}`` envelope.
+per request, so wildcard patterns work; public endpoints set ``*``
+themselves), the request size cap, rate limiting, blueprint registration,
+health checks and the error handlers that always emit the ``{"error": {...}}``
+envelope.
 """
 from __future__ import annotations
-
-from datetime import timedelta
 
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
@@ -21,7 +19,7 @@ from dbcore.config import config
 from dbcore.origins import matcher
 
 from .errors import ApiError
-from .extensions import limiter, oauth
+from .extensions import limiter
 
 ALLOW_HEADERS = "Content-Type, Authorization, X-Requested-With"
 ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -29,35 +27,24 @@ ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
     app.config["SECRET_KEY"] = config.secret_key
-    # Flask's signed cookie session is used ONLY to carry OAuth state between
-    # /start and /callback (Authlib stores state + nonce + PKCE verifier in
-    # it). Scoped to the OAuth routes and short-lived; see CONTRACT.md.
-    app.config.update(
-        SESSION_COOKIE_NAME="3m4_oauth",
-        SESSION_COOKIE_HTTPONLY=True,
-        SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=config.cookie_secure,
-        SESSION_COOKIE_PATH="/api/auth/oauth",
-        PERMANENT_SESSION_LIFETIME=timedelta(minutes=10),
-    )
 
     limiter.init_app(app)
-    oauth.init_app(app)
 
-    from .blueprints.auth import bp as auth_bp
+    from .blueprints.catalog import bp as catalog_bp
+    from .blueprints.checkout import bp as checkout_bp
     from .blueprints.me import bp as me_bp
-    from .blueprints.oauth import bp as oauth_bp, register_providers
     from .blueprints.public import bp as public_bp
-    from .blueprints.session import bp as session_bp
+    from .blueprints.service import bp as service_bp
+    from .blueprints.stripe_webhook import bp as stripe_bp
     from .features import bp as features_bp
 
-    register_providers(oauth)
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(oauth_bp, url_prefix="/api/auth/oauth")
-    app.register_blueprint(session_bp, url_prefix="/api/session")
-    app.register_blueprint(me_bp, url_prefix="/api/me")
+    app.register_blueprint(catalog_bp, url_prefix="/api")
+    app.register_blueprint(checkout_bp, url_prefix="/api/checkout")
+    app.register_blueprint(me_bp, url_prefix="/api")
+    app.register_blueprint(service_bp, url_prefix="/api/v1")
+    app.register_blueprint(stripe_bp, url_prefix="/api/stripe")
     app.register_blueprint(features_bp, url_prefix="/api/features")
     app.register_blueprint(public_bp)
 

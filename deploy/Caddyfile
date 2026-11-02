@@ -1,25 +1,23 @@
-# accounts reverse proxy (local development). Single host on :8085; the
+# payments reverse proxy (local development). Single host on :8086; the
 # production routing lives in the 3m4 edge Caddy (see PRODUCTION.md), with the
 # same rules.
 
-:8085 {
+:8086 {
 	# --- API ---
 	handle /api/* {
 		reverse_proxy api:5000
 	}
 
-	# --- Public key set, avatars and the bare health check are served by the
-	# API at the host root (relying apps fetch the JWKS; every app embeds the
-	# avatar URLs).
-	@apiRoot path /.well-known/* /avatars/* /healthz
+	# --- Badges and the bare health check are served by the API at the host
+	# root (READMEs embed /badge/<handle>.svg through GitHub's camo).
+	@apiRoot path /badge/* /healthz
 	handle @apiRoot {
 		reverse_proxy api:5000
 	}
 
-	# --- Session widget: a static file served by the web service, embedded by
-	# the static 3m4 sites (info, kinegram, bubbles), so it must be cacheable
-	# and CORS-open.
-	@widget path /session.js
+	# --- Payments widget: a static file served by the web service, embedded by
+	# the other 3m4 apps and static sites, so it must be cacheable and CORS-open.
+	@widget path /pay.js
 	handle @widget {
 		header {
 			Cache-Control "public, max-age=300"

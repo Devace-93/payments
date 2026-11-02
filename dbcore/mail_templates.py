@@ -1,9 +1,15 @@
-"""Mail templates: ``verify``, ``magic``, ``magic_no_account``,
-``password_changed`` in English and Spanish (other locales fall back to
-English). Each renders to ``(subject, text, html)``.
+"""Mail templates (CONTRACT.md §12): ``donation_receipt``,
+``subscription_started``, ``subscription_cancelled``, ``payment_failed`` in
+English and Spanish (other locales fall back to English). Each renders to
+``(subject, text, html)`` from a ``params`` dict:
 
-Links always point at the hosted *pages* (``/verify?token=``,
-``/magic?token=``), which POST the token; a GET never consumes anything.
+- ``donation_receipt``: ``amount, currency, app_name, code?``
+- ``subscription_started``: ``app_name, label, amount, currency, interval, period_end``
+- ``subscription_cancelled``: ``app_name, label, period_end``
+- ``payment_failed``: ``app_name, label``
+
+Links point at the hosted pages (``/claim?code=``, ``/me``); Stripe's own
+receipts (legal lines) stay enabled in the Dashboard.
 """
 from __future__ import annotations
 
@@ -13,6 +19,8 @@ from urllib.parse import urlencode
 from .config import config
 
 SUPPORTED_LANGS = ("en", "es")
+
+_SYMBOLS = {"usd": "$", "eur": "€", "mxn": "MX$", "gbp": "£"}
 
 
 def pick_lang(*candidates: str | None) -> str:
@@ -27,63 +35,78 @@ def pick_lang(*candidates: str | None) -> str:
     return "en"
 
 
-def verify_link(token: str, return_to: str | None = None) -> str:
-    params = {"token": token}
-    if return_to:
-        params["return_to"] = return_to
-    return f"{config.accounts_url}/verify?{urlencode(params)}"
+def fmt_amount(cents: int | None, currency: str | None) -> str:
+    """``"$5.00 USD"``, ``"MX$100.00"``, ``"€5.00"`` (unknown → ``"5.00 XYZ"``)."""
+    cents = int(cents or 0)
+    currency = (currency or "").lower()
+    major = f"{cents / 100:,.2f}"
+    if currency == "usd":
+        return f"${major} USD"
+    symbol = _SYMBOLS.get(currency)
+    if symbol:
+        return f"{symbol}{major}"
+    return f"{major} {currency.upper()}".strip()
 
 
-def magic_link(token: str, return_to: str | None = None) -> str:
-    params = {"token": token}
-    if return_to:
-        params["return_to"] = return_to
-    return f"{config.accounts_url}/magic?{urlencode(params)}"
+def claim_link(code: str) -> str:
+    return f"{config.payments_url}/claim?{urlencode({'code': code})}"
 
 
-def signup_link() -> str:
-    return f"{config.accounts_url}/signup"
+def me_link(portal: bool = False) -> str:
+    return f"{config.payments_url}/me" + ("?portal=1" if portal else "")
 
 
 _STRINGS: dict[str, dict[str, str]] = {
     "en": {
-        "brand": "3m4 accounts",
-        "verify.subject": "Confirm your email for 3m4",
-        "verify.body": "Hi {name},\n\nConfirm this address to finish setting up your 3m4 account:",
-        "verify.cta": "Confirm my email",
-        "verify.expires": "The link works for {hours} hours. If you did not create an account, ignore this message.",
-        "magic.subject": "Your sign-in link for 3m4",
-        "magic.body": "Hi {name},\n\nClick the link below to sign in. It works once, for {minutes} minutes.",
-        "magic.cta": "Sign in to 3m4",
-        "magic.ignore": "If you did not ask for this link, you can ignore this message; nobody can sign in without it.",
-        "noaccount.subject": "No 3m4 account for this address yet",
-        "noaccount.body": "Someone (probably you) asked for a sign-in link for {email}, but there is no 3m4 account with that address.\n\nCreate one in a minute:",
-        "noaccount.cta": "Create an account",
-        "noaccount.ignore": "If that was not you, ignore this message.",
-        "pwd.subject": "Your 3m4 password was changed",
-        "pwd.body": "Hi {name},\n\nThe password of your 3m4 account was just changed and every other session was signed out.\n\nIf that was you, there is nothing else to do. If it was not, request a sign-in link right away and change the password from your profile:",
-        "pwd.cta": "Open my profile",
-        "footer": "This message was sent by {brand} ({url}) because of an action involving {email}.",
+        "brand": "3m4 payments",
+        "interval.month": "month",
+        "interval.year": "year",
+        "receipt.subject": "Thank you for supporting {app_name}",
+        "receipt.body": "Thank you! Your donation of {amount} to {app_name} went through.",
+        "receipt.code": "This donation was made without an account. To attach it to your 3m4 account (supporter badge, history), use this claim code:\n\n{code}",
+        "receipt.cta": "Claim this donation",
+        "receipt.cta_account": "See my support",
+        "receipt.tail": "Stripe sends a separate receipt for your records. Reply to this message if anything looks wrong.",
+        "receipt.tail_code": "The code works once and expires in {days} days. Stripe sends a separate receipt for your records.",
+        "started.subject": "Your {app_name} {label} subscription is active",
+        "started.body": "Thanks for subscribing to {app_name} {label}: {amount} per {interval}.\n\nYour first period ends on {period_end}. You can switch plans, update your card or cancel at any time from your payments page.",
+        "started.cta": "Manage my subscription",
+        "started.tail": "Stripe emails you an invoice for every renewal.",
+        "cancelled.subject": "Your {app_name} {label} subscription has been cancelled",
+        "cancelled.body": "Your {app_name} {label} subscription will not renew. {label} stays active until {period_end}; after that your account goes back to the free plan.\n\nChanged your mind? You can resubscribe at any time.",
+        "cancelled.cta": "Resubscribe",
+        "cancelled.tail": "Sorry to see you go. Reply to this message if something did not work the way you expected.",
+        "failed.subject": "Payment failed for {app_name} {label}",
+        "failed.body": "We could not charge your card for {app_name} {label}. Stripe will retry a few times; if it keeps failing the subscription will be cancelled.\n\nUpdate your payment method to keep {label}:",
+        "failed.cta": "Update my payment method",
+        "failed.tail": "If you already updated it, ignore this message.",
+        "footer": "This message was sent by {brand} ({url}) to {email} because of a payment to a 3m4 app.",
         "fallback": "If the button does not work, copy this address into your browser:",
     },
     "es": {
-        "brand": "Cuentas 3m4",
-        "verify.subject": "Confirma tu correo para 3m4",
-        "verify.body": "Hola {name}:\n\nConfirma esta dirección para terminar de crear tu cuenta de 3m4:",
-        "verify.cta": "Confirmar mi correo",
-        "verify.expires": "El enlace funciona durante {hours} horas. Si no creaste una cuenta, ignora este mensaje.",
-        "magic.subject": "Tu enlace para entrar a 3m4",
-        "magic.body": "Hola {name}:\n\nHaz clic en el enlace para iniciar sesión. Funciona una sola vez, durante {minutes} minutos.",
-        "magic.cta": "Entrar a 3m4",
-        "magic.ignore": "Si no pediste este enlace, ignora este mensaje; nadie puede entrar sin él.",
-        "noaccount.subject": "Aún no hay una cuenta de 3m4 con este correo",
-        "noaccount.body": "Alguien (probablemente tú) pidió un enlace de acceso para {email}, pero no existe una cuenta de 3m4 con esa dirección.\n\nCrea una en un minuto:",
-        "noaccount.cta": "Crear una cuenta",
-        "noaccount.ignore": "Si no fuiste tú, ignora este mensaje.",
-        "pwd.subject": "Se cambió la contraseña de tu cuenta de 3m4",
-        "pwd.body": "Hola {name}:\n\nSe acaba de cambiar la contraseña de tu cuenta de 3m4 y se cerraron las demás sesiones.\n\nSi fuiste tú, no tienes que hacer nada más. Si no, pide un enlace de acceso de inmediato y cambia la contraseña desde tu perfil:",
-        "pwd.cta": "Abrir mi perfil",
-        "footer": "Este mensaje lo envió {brand} ({url}) por una acción relacionada con {email}.",
+        "brand": "Pagos 3m4",
+        "interval.month": "mes",
+        "interval.year": "año",
+        "receipt.subject": "Gracias por apoyar a {app_name}",
+        "receipt.body": "¡Gracias! Tu donación de {amount} a {app_name} se realizó correctamente.",
+        "receipt.code": "Esta donación se hizo sin cuenta. Para asociarla a tu cuenta de 3m4 (insignia de patrocinador, historial), usa este código:\n\n{code}",
+        "receipt.cta": "Reclamar esta donación",
+        "receipt.cta_account": "Ver mi apoyo",
+        "receipt.tail": "Stripe te envía un recibo aparte. Responde a este mensaje si algo no cuadra.",
+        "receipt.tail_code": "El código funciona una sola vez y caduca en {days} días. Stripe te envía un recibo aparte.",
+        "started.subject": "Tu suscripción {label} de {app_name} está activa",
+        "started.body": "Gracias por suscribirte a {app_name} {label}: {amount} al {interval}.\n\nTu primer periodo termina el {period_end}. Puedes cambiar de plan, actualizar tu tarjeta o cancelar cuando quieras desde tu página de pagos.",
+        "started.cta": "Gestionar mi suscripción",
+        "started.tail": "Stripe te envía una factura por cada renovación.",
+        "cancelled.subject": "Tu suscripción {label} de {app_name} se ha cancelado",
+        "cancelled.body": "Tu suscripción {label} de {app_name} no se renovará. {label} sigue activo hasta el {period_end}; después tu cuenta vuelve al plan gratuito.\n\n¿Cambiaste de opinión? Puedes volver a suscribirte cuando quieras.",
+        "cancelled.cta": "Volver a suscribirme",
+        "cancelled.tail": "Sentimos verte partir. Responde a este mensaje si algo no funcionó como esperabas.",
+        "failed.subject": "Falló el pago de {app_name} {label}",
+        "failed.body": "No pudimos hacer el cargo a tu tarjeta por {app_name} {label}. Stripe lo reintentará varias veces; si sigue fallando, la suscripción se cancelará.\n\nActualiza tu método de pago para conservar {label}:",
+        "failed.cta": "Actualizar mi método de pago",
+        "failed.tail": "Si ya lo actualizaste, ignora este mensaje.",
+        "footer": "Este mensaje lo envió {brand} ({url}) a {email} por un pago a una app de 3m4.",
         "fallback": "Si el botón no funciona, copia esta dirección en tu navegador:",
     },
 }
@@ -100,12 +123,12 @@ def _html(*, body: str, cta: str | None, url: str | None, tail: str, footer: str
     link_line = ""
     if url and cta:
         button = (
-            f'<p style="margin:20px 0"><a href="{escape(url)}" style="display:inline-block;background:#4f46e5;'
+            f'<p style="margin:20px 0"><a href="{escape(url)}" style="display:inline-block;background:#d97706;'
             f'color:#fff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px">{escape(cta)}</a></p>'
         )
         link_line = (
             f'<p style="color:#64748b;font-size:12px;margin:0 0 12px">{escape(fallback)}<br>'
-            f'<a href="{escape(url)}" style="color:#4f46e5;word-break:break-all">{escape(url)}</a></p>'
+            f'<a href="{escape(url)}" style="color:#d97706;word-break:break-all">{escape(url)}</a></p>'
         )
     return (
         '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;'
@@ -117,38 +140,49 @@ def _html(*, body: str, cta: str | None, url: str | None, tail: str, footer: str
     )
 
 
-def render(template: str, *, lang: str, to: str, name: str | None = None, token: str | None = None,
-           return_to: str | None = None) -> tuple[str, str, str]:
+def render(template: str, *, lang: str, to: str, params: dict | None = None) -> tuple[str, str, str]:
     """``(subject, text, html)`` for one of the four templates."""
     lang = lang if lang in SUPPORTED_LANGS else "en"
-    display = name or to.split("@", 1)[0]
-    footer = _s(lang, "footer", brand=_s(lang, "brand"), url=config.accounts_url, email=to)
+    p = dict(params or {})
+    app_name = p.get("app_name") or "3m4"
+    label = p.get("label") or ""
+    amount = fmt_amount(p.get("amount"), p.get("currency"))
+    period_end = p.get("period_end") or "—"
+    footer = _s(lang, "footer", brand=_s(lang, "brand"), url=config.payments_url, email=to)
     fallback = _s(lang, "fallback")
 
-    if template == "verify":
-        url = verify_link(token or "", return_to)
-        body = _s(lang, "verify.body", name=display)
-        tail = _s(lang, "verify.expires", hours=config.verify_token_ttl_hours)
-        cta = _s(lang, "verify.cta")
-        subject = _s(lang, "verify.subject")
-    elif template == "magic":
-        url = magic_link(token or "", return_to)
-        body = _s(lang, "magic.body", name=display, minutes=config.magic_token_ttl_min)
-        tail = _s(lang, "magic.ignore")
-        cta = _s(lang, "magic.cta")
-        subject = _s(lang, "magic.subject")
-    elif template == "magic_no_account":
-        url = signup_link()
-        body = _s(lang, "noaccount.body", email=to)
-        tail = _s(lang, "noaccount.ignore")
-        cta = _s(lang, "noaccount.cta")
-        subject = _s(lang, "noaccount.subject")
-    elif template == "password_changed":
-        url = f"{config.accounts_url}/profile"
-        body = _s(lang, "pwd.body", name=display)
-        tail = ""
-        cta = _s(lang, "pwd.cta")
-        subject = _s(lang, "pwd.subject")
+    if template == "donation_receipt":
+        subject = _s(lang, "receipt.subject", app_name=app_name)
+        body = _s(lang, "receipt.body", amount=amount, app_name=app_name)
+        code = p.get("code")
+        if code:
+            body += "\n\n" + _s(lang, "receipt.code", code=code)
+            url = claim_link(code)
+            cta = _s(lang, "receipt.cta")
+            tail = _s(lang, "receipt.tail_code", days=config.claim_code_ttl_days)
+        else:
+            url = me_link()
+            cta = _s(lang, "receipt.cta_account")
+            tail = _s(lang, "receipt.tail")
+    elif template == "subscription_started":
+        interval = _s(lang, f"interval.{p.get('interval') or 'month'}") if p.get("interval") in ("month", "year") else (p.get("interval") or "")
+        subject = _s(lang, "started.subject", app_name=app_name, label=label)
+        body = _s(lang, "started.body", app_name=app_name, label=label, amount=amount, interval=interval, period_end=period_end)
+        url = me_link()
+        cta = _s(lang, "started.cta")
+        tail = _s(lang, "started.tail")
+    elif template == "subscription_cancelled":
+        subject = _s(lang, "cancelled.subject", app_name=app_name, label=label)
+        body = _s(lang, "cancelled.body", app_name=app_name, label=label, period_end=period_end)
+        url = p.get("resubscribe_url") or me_link()
+        cta = _s(lang, "cancelled.cta")
+        tail = _s(lang, "cancelled.tail")
+    elif template == "payment_failed":
+        subject = _s(lang, "failed.subject", app_name=app_name, label=label)
+        body = _s(lang, "failed.body", app_name=app_name, label=label)
+        url = me_link(portal=True)
+        cta = _s(lang, "failed.cta")
+        tail = _s(lang, "failed.tail")
     else:
         raise ValueError(f"unknown mail template {template!r}")
 

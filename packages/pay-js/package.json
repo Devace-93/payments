@@ -1,8 +1,8 @@
 {
-  "name": "@accounts/session-js",
+  "name": "@payments/pay-js",
   "version": "0.1.0",
   "private": true,
-  "description": "session.js: drop-in login / avatar widget for static 3m4 apps, zero dependencies, served at accounts.3m4.net/session.js",
+  "description": "pay.js: drop-in donate / subscribe button for static 3m4 apps, zero dependencies, served at payments.3m4.net/pay.js",
   "license": "MIT",
   "type": "module",
   "scripts": {

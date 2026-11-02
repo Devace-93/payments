@@ -1,7 +1,7 @@
 """Thin PostHog wrapper. No-ops when POSTHOG_API_KEY is unset (self-host friendly).
 
-Person id is always the accounts user id, so events line up with the other
-3m4 apps once they identify the same id.
+Person id is the accounts identity id (the JWT ``sub``), so events line up
+with the other 3m4 apps.
 """
 from __future__ import annotations
 

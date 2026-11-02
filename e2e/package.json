@@ -1,8 +1,8 @@
 {
-  "name": "accounts-e2e",
+  "name": "payments-e2e",
   "private": true,
   "version": "0.0.0",
-  "description": "Playwright end-to-end suite for the accounts stack (hosted pages + API + session.js widget + Mailpit).",
+  "description": "Playwright end-to-end suite for the payments stack (hosted pages + API + pay.js widget + Mailpit), with accounts as the identity provider.",
   "type": "module",
   "scripts": {
     "test": "playwright test",

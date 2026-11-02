@@ -1,9 +1,8 @@
 /** Shared chrome: navigation, footer, language/theme controls, common words. */
 export const chrome = {
+  "nav.home": "Home",
+  "nav.me": "Your support",
   "nav.login": "Log in",
-  "nav.signup": "Sign up",
-  "nav.profile": "Profile",
-  "nav.logout": "Log out",
 
   "footer.madeBy": "Made by Enrique Magallón",
   "footer.source": "Source",
@@ -16,9 +15,9 @@ export const chrome = {
   "ui.search": "Search",
   "ui.close": "Close",
 
-  "building.title": "We're building 3m4 accounts",
+  "building.title": "We're building 3m4 payments",
   "building.body":
-    "One login for every 3m4 app. The pages are not open yet, but existing sessions, the key set and session.js keep working.",
+    "One place to support every 3m4 app. The pages are not open yet, but the API, the badges and pay.js keep working.",
   "building.footer": "Thanks for your patience.",
 
   "common.loading": "Loading…",
@@ -26,10 +25,10 @@ export const chrome = {
   "common.saving": "Saving…",
   "common.saved": "Saved.",
   "common.cancel": "Cancel",
-  "common.remove": "Remove",
   "common.retry": "Try again",
   "common.continue": "Continue",
   "common.optional": "(optional)",
-  "common.email": "Email",
-  "common.password": "Password",
+  "common.back": "Back",
+  "common.copy": "Copy",
+  "common.copied": "Copied!",
 } as const;

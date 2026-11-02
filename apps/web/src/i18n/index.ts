@@ -20,10 +20,10 @@ export interface I18nState {
   strings: PartialCatalog;
 }
 
-export const I18nContext = createContextId<I18nState>("accounts.i18n");
+export const I18nContext = createContextId<I18nState>("payments.i18n");
 
 // One chunk per catalog file; Vite resolves the glob at build time.
-const loaders = import.meta.glob<{ default: PartialCatalog }>("./catalog/*.ts");
+const loaders = import.meta.glob<{ default: PartialCatalog }>(["./catalog/*.ts", "!./catalog/en.ts"]);
 
 async function loadCatalog(lang: string): Promise<PartialCatalog> {
   const base = baseOf(lang);
@@ -86,7 +86,7 @@ export function translate(store: I18nState, key: CatalogKey, params?: Params): s
  * Usage in components:
  *
  *   const i18n = useI18n();
- *   <h1>{tr(i18n, "auth.loginTitle")}</h1>
+ *   <h1>{tr(i18n, "pay.meTitle")}</h1>
  *
  * `tr` is a module function on purpose: Qwik's optimizer treats values
  * returned by `use*` hooks as reactive state that must be serializable, so a
@@ -99,9 +99,18 @@ export function useI18n(): I18nState {
   return useContext(I18nContext);
 }
 
-/** Translate an API error code (`auth.err.<code>`), falling back to the generic message. */
-export function trError(store: I18nState, code: string | undefined, fallback?: string): string {
-  const key = `auth.err.${code ?? ""}` as CatalogKey;
-  if (code && key in en) return translate(store, key);
-  return fallback || translate(store, "auth.err.generic");
+/**
+ * Translate an API error code (`pay.err.<code>`), falling back to the generic
+ * message. `params` fills placeholders (`amount_too_small` → `{min}`).
+ */
+export function trError(store: I18nState, code: string | undefined, fallback?: string, params?: Params): string {
+  const key = `pay.err.${code ?? ""}` as CatalogKey;
+  if (code && key in en) return translate(store, key, params);
+  return fallback || translate(store, "pay.err.generic");
+}
+
+/** `<prefix>.<value>` when the catalog has it (status / kind labels), else the raw value. */
+export function trLabel(store: I18nState, prefix: string, value: string): string {
+  const key = `${prefix}.${value}` as CatalogKey;
+  return key in en ? translate(store, key) : value;
 }

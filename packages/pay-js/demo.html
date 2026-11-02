@@ -3,37 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>session.js demo</title>
+    <title>pay.js demo</title>
     <style>
-      :root { --accent: #605dff; }
+      :root { --accent: #f59e0b; }
       body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #f7f7fb; color: #1b1c22; }
       @media (prefers-color-scheme: dark) { body { background: #0b0c10; color: #e8e9ed; } }
-      header { display: flex; justify-content: space-between; align-items: center; }
+      header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+      #support, #pro { display: inline-flex; gap: .5rem; }
       pre { background: rgba(127,127,127,.12); padding: 1rem; border-radius: 8px; overflow: auto; }
     </style>
   </head>
   <body>
     <header>
-      <h1>session.js demo</h1>
-      <div id="session"></div>
+      <h1>pay.js demo</h1>
+      <div id="support"></div>
     </header>
     <p>
-      The widget above talks to the accounts origin the script was loaded from
-      (<code>http://localhost:8085</code> when you open this file through the local stack).
-      Log in there, come back, and it shows your avatar and handle.
+      The buttons talk to the payments origin the script was loaded from
+      (<code>http://localhost:8086</code> when you open this file next to the local stack).
+      The donate button opens the hosted <code>/donate</code> page in a popup; the subscribe
+      button opens <code>/subscribe</code> (log in on accounts first). When the success page posts
+      <code>m4pay:complete</code>, the host receives a <code>m4pay:paid</code> event:
     </p>
-    <pre id="out">waiting for m4session…</pre>
+    <p id="pro"></p>
+    <pre id="out">waiting for m4pay:paid…</pre>
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const out = document.getElementById("out");
-        const tick = () => {
-          if (!window.m4session) return setTimeout(tick, 100);
-          window.m4session.onChange((u) => (out.textContent = JSON.stringify(u, null, 2) || "null (signed out)"));
-        };
-        tick();
+      window.addEventListener("m4pay:paid", (e) => {
+        document.getElementById("out").textContent = JSON.stringify(e.detail, null, 2);
       });
     </script>
-    <!-- Point this at your local stack or the production host. -->
-    <script src="http://localhost:8085/session.js" data-mount="#session" defer></script>
+    <!-- Point these at your local stack or the production host. -->
+    <script src="http://localhost:8086/pay.js" data-app="3m4" data-kind="donate" data-amount="500" data-currency="usd" data-mount="#support" defer></script>
+    <script src="http://localhost:8086/pay.js" data-app="retro" data-kind="subscribe" data-price="pro_monthly" data-mount="#pro" defer></script>
   </body>
 </html>

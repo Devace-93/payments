@@ -1,1 +1,1 @@
-"""One blueprint per resource: auth, oauth, session, me, public."""
+"""One blueprint per resource: catalog, checkout, me, service, stripe_webhook, public."""

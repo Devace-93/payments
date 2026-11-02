@@ -1,4 +1,4 @@
-# accounts API service image (also used for the `worker` and `migrate` services).
+# payments API service image (also used for the `worker` and `migrate` services).
 # Build context is the REPO ROOT (see deploy/docker-compose.yml:
 #   build: { context: .., dockerfile: services/api/Dockerfile }).
 FROM python:3.12-slim
@@ -13,13 +13,17 @@ WORKDIR /app
 COPY services/api/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Shared core + shared config, then the API package itself.
-# The package must live at /app/api so `api.app:create_app` is importable.
+# Shared core + shared config (catalog.json, feature_flags.json), then the API
+# package itself. The package must live at /app/api so `api.app:create_app`
+# is importable (and `dbcore.cli seed-completed` can import api.stripe_events).
 COPY dbcore /app/dbcore
 COPY packages/shared /app/packages/shared
 COPY services/api/api /app/api
 # Alembic migrations (run by the `migrate` compose service via dbcore.cli).
 COPY db /app/db
+
+# GeoLite2-Country lands here (compose volume `geoip`; `cli geoip-update`).
+RUN mkdir -p /data
 
 EXPOSE 5000
 

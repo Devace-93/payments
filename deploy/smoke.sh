@@ -1,15 +1,10 @@
 #!/usr/bin/env sh
-# Smoke test for a running accounts stack: health, JWKS shape, session.js
-# headers, sign up with a cookie jar → GET /api/session → log out → 401.
-#   BASE_URL=http://localhost:8085 sh deploy/smoke.sh
-# Creates a throwaway user, so it needs signups ON. Mail is not checked here
-# (see e2e/ for the verification and magic-link flows through Mailpit).
+# Smoke test for a running payments stack: health, catalog, pay.js headers,
+# the grey badge, geo and the fee hint. Read-only: creates nothing.
+#   BASE_URL=http://localhost:8086 sh deploy/smoke.sh
 set -eu
-BASE_URL="${BASE_URL:-http://localhost:8085}"
+BASE_URL="${BASE_URL:-http://localhost:8086}"
 API="$BASE_URL/api"
-UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 smoke"
-JAR="$(mktemp)"
-trap 'rm -f "$JAR"' EXIT
 
 say() { printf '\033[36m▸ %s\033[0m\n' "$1"; }
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1" >&2; exit 1; }; }
@@ -19,40 +14,30 @@ say "health"
 curl -fsS "$API/healthz" | grep -q '"ok"' && echo "  api ok"
 curl -fsS "$BASE_URL/healthz" | grep -q '"ok"' && echo "  api ok at the host root"
 
-say "jwks"
-curl -fsS "$BASE_URL/.well-known/jwks.json" | python3 -c '
+say "catalog (retro)"
+curl -fsS "$API/catalog?app=retro" | python3 -c '
 import json, sys
-keys = json.load(sys.stdin)["keys"]
-assert keys, "no keys"
-k = keys[0]
-assert k["kty"] == "OKP" and k["crv"] == "Ed25519" and k["alg"] == "EdDSA" and k["kid"] and k["x"], k
-print("  %d key(s), active kid %s" % (len(keys), k["kid"]))'
-curl -fsS -o /dev/null -D - "$BASE_URL/.well-known/jwks.json" | tr -d '\r' | grep -iE '^cache-control:' | sed 's/^/  /'
+c = json.load(sys.stdin)
+assert c["app"]["slug"] == "retro", c
+assert c["currencies"] and c["default_currency"] in c["currencies"], c
+assert all(c["donation"]["min"][cur] > 0 for cur in c["currencies"]), c
+print("  %s · currencies %s · min %s · %d product(s)" % (c["app"]["name"], ",".join(c["currencies"]), c["donation"]["min"], len(c["products"])))'
+curl -fsS -o /dev/null -D - "$API/catalog?app=retro" | tr -d '\r' | grep -iE '^(cache-control|access-control-allow-origin):' | sed 's/^/  /'
+CODE=$(curl -sS -o /dev/null -w '%{http_code}' "$API/catalog?app=nope")
+[ "$CODE" = "400" ] && echo "  unknown app → 400" || { echo "  expected 400 for unknown app, got $CODE" >&2; exit 1; }
 
-say "session.js headers"
-curl -fsS -o /dev/null -D - "$BASE_URL/session.js" | tr -d '\r' | grep -iE '^(content-type|cache-control|access-control-allow-origin):' | sed 's/^/  /'
+say "geo + fees"
+curl -fsS "$API/geo" | sed 's/^/  /'; echo
+curl -fsS "$API/fees?amount=500&currency=usd" | python3 -c 'import json,sys; f=json.load(sys.stdin); print("  retention %.1f%% · min %d" % (f["retention"]*100, f["min_amount"]))'
 
-say "sign up (cookie jar)"
-STAMP=$(date +%s)
-EMAIL="smoke-$STAMP@example.com"
-curl -fsS -c "$JAR" -b "$JAR" -X POST "$API/auth/signup" -H 'Content-Type: application/json' -H "User-Agent: $UA" \
-  -d "{\"email\":\"$EMAIL\",\"password\":\"Smoke-Passw0rd!\",\"handle\":\"smoke-$STAMP\"}" \
-  | python3 -c 'import json,sys; u=json.load(sys.stdin)["user"]; print("  user %s handle %s verified=%s" % (u["id"], u["handle"], u["email_verified"]))'
-grep -q '3m4_session' "$JAR" && echo "  3m4_session cookie set"
-grep -q '3m4_refresh' "$JAR" && echo "  3m4_refresh cookie set"
+say "pay.js headers"
+curl -fsS -o /dev/null -D - "$BASE_URL/pay.js" | tr -d '\r' | grep -iE '^(content-type|cache-control|access-control-allow-origin):' | sed 's/^/  /'
 
-say "session from the cookie"
-USER_ID=$(curl -fsS -b "$JAR" "$API/session" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["user"]["id"])')
-echo "  user $USER_ID"
+say "badge (unknown handle → grey, 200)"
+curl -fsS -o /dev/null -D - "$BASE_URL/badge/nobody.svg" | tr -d '\r' | grep -iE '^(HTTP|content-type|cache-control|etag|access-control-allow-origin)' | sed 's/^/  /'
+curl -fsS "$BASE_URL/badge/nobody.json" | grep -q '"not a supporter"' && echo "  shields json ok"
 
-say "default avatar"
-curl -fsS -o /dev/null -w "  %{http_code} %{content_type}\n" "$BASE_URL/avatars/$USER_ID"
-
-say "refresh rotates the cookies"
-curl -fsS -c "$JAR" -b "$JAR" -X POST "$API/session/refresh" -H 'Content-Type: application/json' -d '{}' >/dev/null && echo "  refreshed"
-
-say "log out"
-curl -fsS -c "$JAR" -b "$JAR" -X POST "$API/session/logout" -H 'Content-Type: application/json' -d '{}' -o /dev/null -w "  %{http_code}\n"
-CODE=$(curl -sS -b "$JAR" -o /dev/null -w '%{http_code}' "$API/session")
-[ "$CODE" = "401" ] && echo "  session gone (401)" || { echo "  expected 401 after logout, got $CODE" >&2; exit 1; }
+say "session required"
+CODE=$(curl -sS -o /dev/null -w '%{http_code}' "$API/me")
+[ "$CODE" = "401" ] && echo "  /api/me without session → 401" || { echo "  expected 401, got $CODE" >&2; exit 1; }
 echo "smoke ok"

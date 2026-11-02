@@ -1,16 +1,16 @@
-name: accounts
+name: payments
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: accounts
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-accounts}
-      POSTGRES_DB: accounts
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payments}
+      POSTGRES_DB: payments
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U accounts"]
+      test: ["CMD-SHELL", "pg_isready -U payments"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,23 +28,25 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Local mail sink: every verification / magic-link mail lands here.
-  # SMTP on 1025 (SMTP_URL=smtp://mailpit:1025), web UI + JSON API on :8025.
+  # Local mail sink: receipts and subscription mails land here.
+  # SMTP on 1025 (SMTP_URL=smtp://mailpit:1025), web UI + JSON API on :8026.
   # Disabled in production (docker-compose.prod.yml), where Resend delivers.
   mailpit:
     image: axllent/mailpit
     ports:
-      - "8025:8025"
+      - "8026:8025"
     expose: ["1025"]
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
     restart: unless-stopped
 
-  # Creates/upgrades the schema, then exits. Other services wait for it.
+  # Creates/upgrades the schema and mirrors catalog.json, then exits. Other
+  # services wait for it. With an empty STRIPE_SECRET_KEY the sync uses fake
+  # price ids, so the stack boots without a Stripe account.
   migrate:
     build: { context: .., dockerfile: services/api/Dockerfile }
-    command: ["python", "-m", "dbcore.cli", "upgrade"]
+    command: ["sh", "-c", "python -m dbcore.cli upgrade && python -m dbcore.cli sync-catalog"]
     env_file: ../.env
     depends_on:
       postgres: { condition: service_healthy }
@@ -58,13 +60,15 @@ services:
       redis: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
     expose: ["5000"]
-    # Also on the shared `edge` network (created by `make up`), so the other
-    # 3m4 stacks running locally can fetch the JWKS at
-    # http://accounts-api-1:5000/.well-known/jwks.json, exactly as in production.
+    volumes:
+      - geoip:/data
+    # Also on the shared `edge` network (created by `make up`), so the API can
+    # fetch the accounts JWKS at http://accounts-api-1:5000/.well-known/jwks.json
+    # and push webhooks to the sibling stacks, exactly as in production.
     networks: [default, edge]
     restart: unless-stopped
 
-  # Outbox consumer: delivers the mails the API queued (same image as the API).
+  # Outbox consumer: delivers mails and app webhooks the API queued (same image).
   worker:
     build: { context: .., dockerfile: services/api/Dockerfile }
     command: ["python", "-m", "dbcore.worker"]
@@ -72,6 +76,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
+    networks: [default, edge]
     restart: unless-stopped
 
   web:
@@ -83,6 +88,8 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_ACCOUNTS_URL: ${VITE_ACCOUNTS_URL:-http://localhost:8085}
+        VITE_GITHUB_SPONSORS_URL: ${VITE_GITHUB_SPONSORS_URL:-}
         VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY:-}
         VITE_POSTHOG_HOST: ${VITE_POSTHOG_HOST:-https://us.i.posthog.com}
         VITE_INFO_URL: ${VITE_INFO_URL:-https://info.3m4.net}
@@ -95,12 +102,13 @@ services:
       # SSR resolves the feature switches straight from the API over the internal network.
       API_INTERNAL_URL: http://api:5000/api
     expose: ["3000"]
+    networks: [default, edge]
     restart: unless-stopped
 
   caddy:
     image: caddy:2-alpine
     ports:
-      - "8085:8085"
+      - "8086:8086"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data
@@ -117,3 +125,4 @@ volumes:
   redisdata:
   caddydata:
   caddyconfig:
+  geoip:

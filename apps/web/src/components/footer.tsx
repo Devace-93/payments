@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { tr, useI18n } from "../i18n";
 
-const GITHUB_URL = "https://github.com/Devace-93/accounts";
+const GITHUB_URL = "https://github.com/Devace-93/payments";
 const LINKEDIN_URL = "https://www.linkedin.com/in/enrique-magallon/";
 const INFO_URL = import.meta.env.VITE_INFO_URL || "https://info.3m4.net";
 

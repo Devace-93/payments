@@ -1,0 +1,14 @@
+# Lint config for the Python side (dbcore, services/api, db, packages/relying-party/python).
+# `dbcore/m4session.py` is vendored verbatim from accounts and is never edited here.
+line-length = 140
+target-version = "py312"
+exclude = ["dbcore/m4session.py", ".venv", "apps", "e2e", "packages/pay-js", "packages/relying-party/ts"]
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+ignore = ["E501", "B008", "UP017", "UP007", "UP035"]
+
+[lint.per-file-ignores]
+"services/api/tests/*" = ["E402", "F401", "F811"]
+"services/api/tests/conftest.py" = ["E402", "F401"]
+"db/migrations/*" = ["I001"]

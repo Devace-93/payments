@@ -1,10 +1,16 @@
 {
-  "name": "@accounts/relying-party",
+  "name": "@payments/relying-party",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser helper for apps that rely on 3m4 accounts sessions (getSession, fetchWithSession, hosted-page URLs). Copy m4session.ts into the app or import it from this folder.",
+  "description": "Browser helper for apps that take payments through payments.3m4.net (donate / subscribe / portal URLs, popup flow with postMessage + entitlement polling, getEntitlements, getMe). Copy m4pay.ts into the app or import it from this folder.",
   "license": "MIT",
   "type": "module",
-  "main": "./m4session.ts",
-  "types": "./m4session.ts"
+  "main": "./m4pay.ts",
+  "types": "./m4pay.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit --strict --target ES2020 --lib ES2020,DOM,DOM.Iterable --moduleResolution bundler --module ESNext --skipLibCheck m4pay.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
 }

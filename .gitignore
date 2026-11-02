@@ -21,8 +21,11 @@ tmp/
 .env.*
 !.env.example
 
-# Generated widget bundle (built from packages/session-js by `make widget` / the web Dockerfile)
-apps/web/public/session.js
+# Generated widget bundle (built from packages/pay-js by `make widget` / the web Dockerfile)
+apps/web/public/pay.js
+
+# GeoLite2 database (downloaded by `cli geoip-update`, never committed)
+*.mmdb
 
 # Data / build
 *.log

@@ -1,7 +1,7 @@
 {
-  "name": "@accounts/web",
+  "name": "@payments/web",
   "version": "0.1.0",
-  "description": "accounts — Qwik City frontend (hosted login / signup / profile pages + session.js) for the 3m4 identity service",
+  "description": "payments \u2014 Qwik City frontend (hosted donate / subscribe / claim / me pages + pay.js) for the 3m4 payments service",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,7 +18,7 @@
     "start": "bun ./server/entry.node-server.js",
     "qwik": "qwik",
     "check:i18n": "bun scripts/check-i18n.ts",
-    "widget": "cd ../../packages/session-js && bun install && bun run build"
+    "widget": "cd ../../packages/pay-js && bun install && bun run build"
   },
   "dependencies": {
     "posthog-js": "^1.438.21"

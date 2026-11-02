@@ -8,16 +8,16 @@ import { FeaturesContext, type Features } from "../lib/features";
 import { fetchServerFeatures } from "../lib/features.server";
 
 /**
- * Root layout — resolves accounts' public features on the server for every
- * route (signups / oauth / magic-link switches), initializes PostHog once, and
- * enforces the `site-building` curtain: while that feature is ON every page
- * renders the building page instead of the app (the API, the JWKS, the
- * avatars and session.js are unaffected).
+ * Root layout — resolves payments' public features on the server for every
+ * route (donations / subscriptions / badges / fee-hint switches), initializes
+ * PostHog once, and enforces the `site-building` curtain: while that feature
+ * is ON every page renders the building page instead of the app (the API,
+ * `/badge/*` and pay.js are unaffected).
  *
  * Resolving on the server means the SSR HTML already reflects the features,
  * so neither the real site nor a gated section flashes. On any error the
  * loader falls back to the registry defaults — feature resolution must never
- * be able to take the login pages down by accident.
+ * be able to take the pages down by accident.
  */
 export const useServerFeatures = routeLoader$<Features>(() => fetchServerFeatures());
 

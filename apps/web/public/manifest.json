@@ -1,10 +1,10 @@
 {
-  "name": "3m4 accounts — one login for every 3m4 app",
-  "short_name": "accounts",
+  "name": "3m4 payments — support every 3m4 app",
+  "short_name": "payments",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "theme_color": "#f59e0b",
   "icons": [
     {
       "src": "/favicon.svg",

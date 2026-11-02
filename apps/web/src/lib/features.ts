@@ -1,14 +1,14 @@
 /**
- * accounts' OWN feature switches ("features"), mirrored from the backend (the
+ * payments' OWN feature switches ("features"), mirrored from the backend (the
  * source of truth). Registry + fail-safe defaults live in
- * `packages/shared/feature_flags.json`. Anonymous pages (login / signup)
- * read them from `GET /api/features`, resolved server-side by the root layout.
- * The UI only hides surfaces — enforcement happens in the Flask API.
+ * `packages/shared/feature_flags.json`. Pages read them from
+ * `GET /api/features`, resolved server-side by the root layout. The UI only
+ * hides surfaces — enforcement happens in the Flask API.
  */
 import { createContextId } from "@builder.io/qwik";
 import registry from "../../../../packages/shared/feature_flags.json";
 
-export type FeatureKey = "site-building" | "signups" | "oauth" | "magic-link";
+export type FeatureKey = "site-building" | "donations" | "subscriptions" | "badges" | "fee-hint";
 
 export type Features = Record<FeatureKey, boolean>;
 
@@ -23,4 +23,4 @@ export function mergeFeatures(server?: Record<string, boolean>): Features {
 }
 
 /** Provided by the root layout; consume with useContext(FeaturesContext). */
-export const FeaturesContext = createContextId<Features>("accounts.features");
+export const FeaturesContext = createContextId<Features>("payments.features");

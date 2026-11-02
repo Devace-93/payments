@@ -20,7 +20,7 @@ export async function initAnalytics(): Promise<void> {
   posthog.init(KEY, {
     api_host: HOST,
     capture_pageview: true,
-    // No autocapture on an auth service: form fields must never leak.
+    // No autocapture on a payments service: form fields must never leak.
     autocapture: false,
     persistence: "localStorage+cookie",
   });

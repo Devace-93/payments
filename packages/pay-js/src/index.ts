@@ -1,273 +1,253 @@
 /**
- * session.js — the 3m4 accounts widget for static apps (info, kinegram,
- * bubbles). See CONTRACT.md → "session.js widget".
+ * pay.js — the 3m4 payments button for static apps (CONTRACT.md §10).
  *
- *   <div id="session"></div>
- *   <script src="https://accounts.3m4.net/session.js" data-mount="#session" defer></script>
+ *   <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="donate"
+ *           data-amount="500" data-currency="usd" data-label="Buy me a coffee" data-mount="#support" defer></script>
+ *   <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="subscribe"
+ *           data-price="pro_monthly" data-return-to="https://retro.3m4.net/dashboard/billing" defer></script>
  *
- * Signed out: "Log in · Sign up" links to the hosted pages with
- * return_to=location.href. Signed in: avatar + handle; clicking opens a menu
- * with Profile and Log out. Strings follow `3m4.lang` (en / es), the theme
- * follows `3m4.theme` / prefers-color-scheme, and the host's `--accent` CSS
- * variable is used when present. Also exposes `window.m4session`.
- *
- * Everything is wrapped so that a failure here never throws into the host.
+ * One button per tag (`data-mount` selector, else inserted after the script).
+ * Click → popup `window.open(url, "m4pay", "popup,width=480,height=780")`;
+ * blocked → `location.assign(url)`. Accepts `message` events only from the
+ * payments origin with `data.type === "m4pay:complete"` and dispatches a
+ * `window` CustomEvent `m4pay:paid` with that `detail`. For `subscribe` it also
+ * polls `GET /api/entitlements?app=` (credentials) on `focus`, up to 10 × 3 s,
+ * because COOP may null `window.opener` after the Stripe hop. Theme / lang from
+ * `localStorage 3m4.theme` / `3m4.lang` (en / es, en fallback). Exposes
+ * `window.m4pay = { open, entitlements, origin }`. Never throws into the host.
  */
-interface User {
-  id: string;
-  email: string;
-  email_verified: boolean;
-  handle: string;
-  name: string | null;
-  avatar_url: string;
+interface Entitlements {
+  app: string;
+  entitlements: string[];
+  subscription: { status: string; current_period_end: string | null; cancel_at_period_end: boolean } | null;
+  updated_at: string;
 }
 
-interface M4Session {
-  get(force?: boolean): Promise<User | null>;
-  onChange(cb: (user: User | null) => void): () => void;
-  login(returnTo?: string): void;
-  signup(returnTo?: string): void;
-  logout(): Promise<void>;
-  profile(): void;
+interface PaidDetail {
+  kind: "donation" | "subscription";
+  app: string;
+  entitlements: string[];
+  via: "message" | "poll";
+}
+
+interface OpenOpts {
+  app: string;
+  kind: "donate" | "subscribe";
+  amount?: number | string;
+  currency?: string;
+  price?: string;
+  returnTo?: string;
+  lang?: string;
+}
+
+interface M4Pay {
+  open(opts: OpenOpts): Window | null;
+  entitlements(app: string): Promise<Entitlements | null>;
   origin: string;
 }
 
 declare global {
   interface Window {
-    m4session?: M4Session;
+    m4pay?: M4Pay;
   }
 }
 
 const STRINGS = {
-  en: { login: "Log in", signup: "Sign up", profile: "Profile", logout: "Log out", menu: "Account menu" },
-  es: { login: "Iniciar sesión", signup: "Regístrate", profile: "Perfil", logout: "Cerrar sesión", menu: "Menú de cuenta" },
+  en: { donate: "Buy me a coffee", subscribe: "Subscribe", opening: "Opening…" },
+  es: { donate: "Invítame un café", subscribe: "Suscribirse", opening: "Abriendo…" },
 };
+
+const CSS = `
+.m4p{--m4p-a:var(--accent,#f59e0b);--m4p-fg:#1c1917;font:600 14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;border-radius:999px;padding:9px 16px;background:var(--m4p-a);color:var(--m4p-fg);text-decoration:none;transition:filter .15s}
+.m4p:hover{filter:brightness(1.06)}.m4p:focus-visible{outline:2px solid var(--m4p-a);outline-offset:2px}.m4p[disabled]{opacity:.7;cursor:progress}
+.m4p[data-dark]{box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.m4p svg{width:16px;height:16px;flex:none}
+`;
 
 (() => {
   try {
-    if (window.m4session) return;
     const script = document.currentScript as HTMLScriptElement | null;
-    const origin = new URL(script?.src || location.href, location.href).origin;
-    const api = origin + "/api";
+    if (!script) return;
+    const origin = new URL(script.src, location.href).origin;
 
-    // ---- strings / theme ---------------------------------------------------
-    const lang = (): keyof typeof STRINGS => {
-      let l = "";
-      try {
-        l = localStorage.getItem("3m4.lang") || "";
-      } catch {
-        /* storage unavailable */
-      }
-      l = (l || document.documentElement.lang || navigator.language || "en").slice(0, 2);
-      return l === "es" ? "es" : "en";
-    };
-    const t = (k: keyof typeof STRINGS.en) => STRINGS[lang()][k];
-    const dark = (): boolean => {
-      let th = document.documentElement.dataset.theme || "";
-      if (!th) {
+    // ---- shared singleton (one per payments origin) -------------------------
+    const shared = (() => {
+      if (window.m4pay && window.m4pay.origin === origin) return window.m4pay;
+
+      const lang = (): keyof typeof STRINGS => {
+        let l = "";
         try {
-          th = localStorage.getItem("3m4.theme") || "";
+          l = localStorage.getItem("3m4.lang") || "";
         } catch {
-          /* ignore */
+          /* storage unavailable */
         }
-      }
-      if (th === "dark" || th === "light") return th === "dark";
-      return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
-    };
-
-    // ---- state ---------------------------------------------------------------
-    let user: User | null = null;
-    let known = false;
-    let inFlight: Promise<User | null> | null = null;
-    const listeners = new Set<(u: User | null) => void>();
-    const notify = () => {
-      listeners.forEach((cb) => {
-        try {
-          cb(user);
-        } catch {
-          /* host callback errors are not ours */
-        }
-      });
-      render();
-    };
-
-    const call = (path: string, init?: RequestInit) =>
-      fetch(api + path, { credentials: "include", headers: { "Content-Type": "application/json" }, ...init });
-
-    const fetchSession = async (): Promise<User | null> => {
-      let res = await call("/session");
-      if (res.status === 401) {
-        let code = "";
-        try {
-          code = (await res.clone().json()).error?.code || "";
-        } catch {
-          /* no body */
-        }
-        if (code === "session_expired") {
-          const r = await call("/session/refresh", { method: "POST", body: "{}" });
-          if (r.ok) res = await call("/session");
-        }
-      }
-      if (!res.ok) return null;
-      return ((await res.json()) as { user: User }).user;
-    };
-
-    const get = (force = false): Promise<User | null> => {
-      if (known && !force) return Promise.resolve(user);
-      if (inFlight) return inFlight;
-      inFlight = fetchSession()
-        .catch(() => (known ? user : null))
-        .then((u) => {
-          const changed = !known || (u?.id ?? null) !== (user?.id ?? null) || u?.avatar_url !== user?.avatar_url;
-          user = u;
-          known = true;
-          inFlight = null;
-          if (changed) notify();
-          return u;
-        });
-      return inFlight;
-    };
-
-    const here = () => location.href;
-    const page = (path: string, returnTo?: string) =>
-      origin + path + "?return_to=" + encodeURIComponent(returnTo || here());
-    const login = (rt?: string) => location.assign(page("/login", rt));
-    const signup = (rt?: string) => location.assign(page("/signup", rt));
-    const profile = () => location.assign(page("/profile"));
-    const logout = async () => {
-      try {
-        await call("/session/logout", { method: "POST", body: "{}" });
-      } catch {
-        /* offline: the cookie will expire on its own */
-      }
-      user = null;
-      known = true;
-      notify();
-    };
-
-    // ---- rendering -----------------------------------------------------------
-    const css = `
-.m4s{--m4s-a:var(--accent,#4f46e5);--m4s-bg:#fff;--m4s-fg:#1b1c22;--m4s-dim:#5c6070;--m4s-br:#e3e3ec;--m4s-hv:#f0f0f8;font:500 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:inline-flex;align-items:center;gap:6px;position:relative;color:var(--m4s-fg)}
-.m4s[data-dark]{--m4s-bg:#15171e;--m4s-fg:#e8e9ed;--m4s-dim:#9a9ea9;--m4s-br:#262a35;--m4s-hv:#1b1e27}
-.m4s a,.m4s button{font:inherit;color:inherit;text-decoration:none;cursor:pointer;background:var(--m4s-bg);border:1px solid var(--m4s-br);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px}
-.m4s a:hover,.m4s button:hover{background:var(--m4s-hv);border-color:var(--m4s-a)}
-.m4s .m4s-p{background:var(--m4s-a);border-color:var(--m4s-a);color:#fff}
-.m4s .m4s-p:hover{filter:brightness(1.08);background:var(--m4s-a)}
-.m4s img{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--m4s-hv)}
-.m4s .m4s-u{padding:3px 12px 3px 3px;max-width:14em}
-.m4s .m4s-u span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.m4s .m4s-m{position:absolute;top:calc(100% + 6px);inset-inline-end:0;min-width:11em;background:var(--m4s-bg);border:1px solid var(--m4s-br);border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:2px;z-index:2147483000}
-.m4s .m4s-m a,.m4s .m4s-m button{border:0;border-radius:8px;padding:8px 10px;background:none;justify-content:flex-start;width:100%}
-.m4s .m4s-m a:hover,.m4s .m4s-m button:hover{background:var(--m4s-hv)}
-.m4s-float{position:fixed;top:16px;inset-inline-end:16px;z-index:2147482999}
-`;
-    let root: HTMLElement | null = null;
-    let open = false;
-
-    const mount = () => {
-      if (root) return root;
-      const sel = script?.getAttribute("data-mount");
-      let host = sel ? (document.querySelector(sel) as HTMLElement | null) : null;
-      if (!host) {
-        host = document.createElement("div");
-        host.className = "m4s-float";
-        document.body.appendChild(host);
-      }
-      const style = document.createElement("style");
-      style.textContent = css;
-      document.head.appendChild(style);
-      root = document.createElement("div");
-      root.className = "m4s";
-      host.appendChild(root);
-      document.addEventListener("click", (e) => {
-        // render() rebuilds the nodes, so a click on the (now detached) toggle
-        // must not count as an outside click.
-        const t = e.target as Node;
-        if (open && root && document.contains(t) && !root.contains(t)) {
-          open = false;
-          render();
-        }
-      });
-      return root;
-    };
-
-    const el = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string>, text?: string) => {
-      const n = document.createElement(tag);
-      for (const k in attrs) n.setAttribute(k, attrs[k]);
-      if (text) n.textContent = text;
-      return n;
-    };
-
-    const render = () => {
-      const r = mount();
-      r.textContent = "";
-      if (dark()) r.setAttribute("data-dark", "");
-      else r.removeAttribute("data-dark");
-      if (!known) return;
-      if (!user) {
-        r.appendChild(el("a", { href: page("/login"), "data-m4s": "login" }, t("login")));
-        r.appendChild(el("a", { href: page("/signup"), class: "m4s-p", "data-m4s": "signup" }, t("signup")));
-        return;
-      }
-      const b = el("button", { type: "button", class: "m4s-u", "aria-haspopup": "menu", "aria-expanded": String(open), "aria-label": t("menu"), "data-m4s": "user" });
-      b.appendChild(el("img", { src: user.avatar_url, alt: user.name || user.handle, width: "24", height: "24" }));
-      b.appendChild(el("span", {}, "@" + user.handle));
-      b.onclick = () => {
-        open = !open;
-        render();
+        l = (l || document.documentElement.lang || navigator.language || "en").slice(0, 2);
+        return l === "es" ? "es" : "en";
       };
-      r.appendChild(b);
-      if (open) {
-        const m = el("div", { class: "m4s-m", role: "menu" });
-        m.appendChild(el("a", { href: page("/profile"), role: "menuitem", "data-m4s": "profile" }, t("profile")));
-        const lo = el("button", { type: "button", role: "menuitem", "data-m4s": "logout" }, t("logout"));
-        lo.onclick = () => {
-          open = false;
-          logout();
-        };
-        m.appendChild(lo);
-        r.appendChild(m);
-      }
-    };
-
-    // ---- public API + lifecycle ----------------------------------------------
-    window.m4session = {
-      get,
-      onChange(cb) {
-        listeners.add(cb);
-        if (known) {
+      const dark = (): boolean => {
+        let th = document.documentElement.dataset.theme || "";
+        if (!th) {
           try {
-            cb(user);
+            th = localStorage.getItem("3m4.theme") || "";
           } catch {
             /* ignore */
           }
         }
-        return () => listeners.delete(cb);
-      },
-      login,
-      signup,
-      logout,
-      profile,
-      origin,
-    };
+        if (th === "dark" || th === "light") return th === "dark";
+        return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
+      };
 
-    const start = () => {
+      const entitlements = async (app: string): Promise<Entitlements | null> => {
+        try {
+          const res = await fetch(`${origin}/api/entitlements?app=${encodeURIComponent(app)}`, { credentials: "include" });
+          if (!res.ok) return null;
+          return (await res.json()) as Entitlements;
+        } catch {
+          return null;
+        }
+      };
+
+      const paid = (detail: PaidDetail) => {
+        try {
+          window.dispatchEvent(new CustomEvent("m4pay:paid", { detail }));
+        } catch {
+          /* host listeners are not ours */
+        }
+      };
+
+      // Pending subscription flows: app → snapshot of entitlements before.
+      const pending = new Map<string, string>();
+      let pollTimer: ReturnType<typeof setTimeout> | null = null;
+      let polls = 0;
+      const poll = async () => {
+        pollTimer = null;
+        if (!pending.size) return;
+        polls++;
+        for (const [app, before] of Array.from(pending)) {
+          const ent = await entitlements(app);
+          if (!ent) continue;
+          const now = JSON.stringify(ent.entitlements.slice().sort());
+          if (now !== before && ent.entitlements.length) {
+            pending.delete(app);
+            paid({ kind: "subscription", app, entitlements: ent.entitlements, via: "poll" });
+          }
+        }
+        if (pending.size && polls < 10) pollTimer = setTimeout(poll, 3000);
+      };
+      window.addEventListener("focus", () => {
+        if (pending.size && !pollTimer) {
+          polls = 0;
+          poll();
+        }
+      });
+      window.addEventListener("message", (e: MessageEvent) => {
+        if (e.origin !== origin) return;
+        const d = e.data as Partial<PaidDetail> & { type?: string };
+        if (!d || d.type !== "m4pay:complete") return;
+        const app = d.app || "";
+        pending.delete(app);
+        paid({ kind: d.kind === "subscription" ? "subscription" : "donation", app, entitlements: d.entitlements || [], via: "message" });
+      });
+
+      const url = (o: OpenOpts): string => {
+        const p = new URLSearchParams({ app: o.app, origin: location.origin, return_to: o.returnTo || location.href });
+        if (o.currency) p.set("currency", o.currency);
+        if (o.kind === "subscribe") {
+          if (o.price) p.set("price", o.price);
+        } else {
+          if (o.amount) p.set("amount", String(o.amount));
+          p.set("lang", o.lang || lang());
+        }
+        return `${origin}/${o.kind === "subscribe" ? "subscribe" : "donate"}?${p}`;
+      };
+
+      const open = (o: OpenOpts): Window | null => {
+        const u = url(o);
+        if (o.kind === "subscribe") {
+          pending.set(o.app, "?");
+          entitlements(o.app).then((ent) => {
+            if (pending.has(o.app)) pending.set(o.app, JSON.stringify((ent?.entitlements || []).slice().sort()));
+          });
+        }
+        const w = window.open(u, "m4pay", "popup,width=480,height=780");
+        if (!w) {
+          location.assign(u);
+          return null;
+        }
+        try {
+          w.focus();
+        } catch {
+          /* ignore */
+        }
+        return w;
+      };
+
+      const api: M4Pay & { _t: typeof STRINGS.en; _dark: () => boolean } = {
+        open,
+        entitlements,
+        origin,
+        get _t() {
+          return STRINGS[lang()];
+        },
+        _dark: dark,
+      };
+      window.m4pay = api;
+      const style = document.createElement("style");
+      style.textContent = CSS;
+      document.head.appendChild(style);
+      return api;
+    })() as M4Pay & { _t: typeof STRINGS.en; _dark: () => boolean };
+
+    // ---- this tag's button -------------------------------------------------
+    const d = script.dataset;
+    const app = d.app || "";
+    if (!app) return;
+    const kind: "donate" | "subscribe" = d.kind === "subscribe" ? "subscribe" : "donate";
+    const opts: OpenOpts = { app, kind, amount: d.amount, currency: d.currency, price: d.price, returnTo: d.returnTo, lang: d.lang };
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "m4p";
+    btn.setAttribute("data-m4pay", kind);
+    const icon =
+      kind === "donate"
+        ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 7.5h10v4.5a4 4 0 0 1-4 4h-2a4 4 0 0 1-4-4z" fill="currentColor"/><path d="M13.5 9h1.2a2 2 0 0 1 0 4h-1.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 5.6c-1.3-1.3-3.2 0-2.2 1.4L8.5 9l2.2-2c1-1.4-.9-2.7-2.2-1.4z" fill="currentColor" opacity=".8"/></svg>'
+        : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 7.8l5-.7z" fill="currentColor"/></svg>';
+    const label = document.createElement("span");
+    const render = () => {
+      label.textContent = d.label || shared._t[kind];
+      if (shared._dark()) btn.setAttribute("data-dark", "");
+      else btn.removeAttribute("data-dark");
+    };
+    btn.innerHTML = icon;
+    btn.appendChild(label);
+    render();
+    btn.onclick = () => {
       try {
-        mount();
-        get();
+        shared.open(opts);
       } catch {
         /* never into the host */
       }
     };
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-    else start();
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") get(true);
-    });
+
+    const mount = () => {
+      try {
+        const sel = d.mount;
+        const host = sel ? document.querySelector(sel) : null;
+        if (host) host.appendChild(btn);
+        else if (script.parentNode) script.parentNode.insertBefore(btn, script.nextSibling);
+        else document.body.appendChild(btn);
+      } catch {
+        /* ignore */
+      }
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
+    else mount();
+
     window.addEventListener("storage", (e) => {
       if (e.key === "3m4.lang" || e.key === "3m4.theme") render();
     });
-    new MutationObserver(() => render()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "lang"] });
+    new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "lang"] });
   } catch {
     /* never throw into the host page */
   }

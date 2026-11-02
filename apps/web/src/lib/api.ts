@@ -1,18 +1,33 @@
 /**
- * Typed client for the accounts API (CONTRACT.md → REST API).
+ * Typed client for the payments API (CONTRACT.md §5).
  *
  * - Base URL from VITE_API_URL (fallback "/api" — works behind Caddy).
  * - Always sends cookies (`credentials: "include"`); there is no token in JS.
- * - JSON bodies get `Content-Type: application/json` (the CSRF guard the
- *   contract relies on); the avatar upload sends `X-Requested-With: 3m4`.
- * - On `401 session_expired` it calls POST /session/refresh once and retries.
+ *   The `3m4_session` cookie is issued by accounts.3m4.net on `.3m4.net`.
+ * - JSON bodies get `Content-Type: application/json`.
+ * - On `401 session_expired` it calls `POST {VITE_ACCOUNTS_URL}/api/session/refresh`
+ *   once (credentials) and retries, as §4 says.
  *
  * Throws `ApiRequestError` (carrying the parsed `error` body + HTTP status) so
  * callers can branch on the stable error codes.
  */
-import type { ApiError, Me, Provider, SessionResponse, SessionRow, User } from "./types";
+import type {
+  ApiError,
+  Catalog,
+  Checkout,
+  CheckoutBody,
+  CheckoutCreated,
+  Customer,
+  Entitlements,
+  Fees,
+  Geo,
+  Me,
+  Payment,
+  Supporter,
+} from "./types";
 
 export const BASE = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+export const ACCOUNTS_URL = (import.meta.env.VITE_ACCOUNTS_URL || "http://localhost:8085").replace(/\/$/, "");
 
 export class ApiRequestError extends Error {
   status: number;
@@ -28,7 +43,6 @@ export class ApiRequestError extends Error {
 interface RequestOptions {
   method?: string;
   body?: unknown;
-  formData?: FormData;
   headers?: Record<string, string>;
   /** Internal: prevents infinite refresh loops. */
   _retried?: boolean;
@@ -51,7 +65,7 @@ export async function tryRefresh(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch(`${BASE}/session/refresh`, {
+      const res = await fetch(`${ACCOUNTS_URL}/api/session/refresh`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -68,12 +82,9 @@ export async function tryRefresh(): Promise<boolean> {
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, formData, headers = {}, _retried = false } = opts;
+  const { method = "GET", body, headers = {}, _retried = false } = opts;
   const init: RequestInit = { method, credentials: "include", headers };
-  if (formData) {
-    init.body = formData;
-    headers["X-Requested-With"] = "3m4";
-  } else if (body !== undefined) {
+  if (body !== undefined) {
     headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body);
   }
@@ -92,51 +103,50 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   return (await res.json()) as T;
 }
 
-/** Absolute or root-relative URL of the OAuth start endpoint for a provider. */
-export function oauthStartUrl(provider: Provider, returnTo: string, link = false): string {
-  const params = new URLSearchParams({ return_to: returnTo });
-  if (link) params.set("link", "1");
-  return `${BASE}/auth/oauth/${provider}/start?${params}`;
+/** Hosted login on accounts, coming back to the current page (§10 login gate). */
+export function loginUrl(returnTo?: string): string {
+  const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
+  return `${ACCOUNTS_URL}/login?return_to=${encodeURIComponent(back)}`;
 }
+
+export function signupUrl(returnTo?: string): string {
+  const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
+  return `${ACCOUNTS_URL}/signup?return_to=${encodeURIComponent(back)}`;
+}
+
+const q = (params: Record<string, string | number | undefined>): string => {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") sp.set(k, String(v));
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+};
 
 export const api = {
   /* ─── Public ───────────────────────────────────────────────────────── */
-  features: () => apiFetch<{ features: Record<string, boolean> }>("/features"),
-  providers: () => apiFetch<{ providers: Provider[] }>("/auth/providers"),
+  getCatalog: (app: string) => apiFetch<Catalog>(`/catalog${q({ app })}`),
+  getGeo: () => apiFetch<Geo>("/geo"),
+  getFees: (amount: number, currency: string, kind: "donation" | "subscription" = "donation") =>
+    apiFetch<Fees>(`/fees${q({ amount, currency, kind })}`),
+  getSupporters: (app: string, limit = 50) => apiFetch<{ items: Supporter[] }>(`/public/supporters${q({ app, limit })}`),
+  getCheckout: (id: string) => apiFetch<Checkout>(`/checkout/${encodeURIComponent(id)}`),
 
-  /* ─── Auth ─────────────────────────────────────────────────────────── */
-  signup: (data: { email: string; password: string; handle?: string; name?: string; lang?: string }) =>
-    apiFetch<{ user: User }>("/auth/signup", { method: "POST", body: data }),
-  login: (email: string, password: string) =>
-    apiFetch<{ user: User }>("/auth/login", { method: "POST", body: { email, password } }),
-  magic: (email: string, return_to?: string, lang?: string) =>
-    apiFetch<Record<string, never>>("/auth/magic", { method: "POST", body: { email, return_to, lang } }),
-  magicConsume: (token: string) =>
-    apiFetch<{ user: User }>("/auth/magic/consume", { method: "POST", body: { token } }),
-  verifyConsume: (token: string) =>
-    apiFetch<{ user: User }>("/auth/verify/consume", { method: "POST", body: { token } }),
-  verifyResend: (lang?: string) =>
-    apiFetch<Record<string, never>>("/auth/verify/resend", { method: "POST", body: { lang } }),
+  /* ─── Checkout (optional session) ──────────────────────────────────── */
+  createCheckout: (body: CheckoutBody) => apiFetch<CheckoutCreated>("/checkout", { method: "POST", body }),
 
   /* ─── Session ──────────────────────────────────────────────────────── */
-  session: () => apiFetch<SessionResponse>("/session"),
-  refresh: () => apiFetch<{ user: User }>("/session/refresh", { method: "POST", body: {} }),
-  logout: (all = false) => apiFetch<void>("/session/logout", { method: "POST", body: { all } }),
-  sessions: () => apiFetch<{ items: SessionRow[] }>("/session/list"),
-  revokeSession: (id: string) => apiFetch<void>(`/session/${encodeURIComponent(id)}`, { method: "DELETE" }),
-
-  /* ─── Me ───────────────────────────────────────────────────────────── */
-  me: () => apiFetch<Me>("/me"),
-  updateMe: (data: { name?: string; handle?: string }) =>
-    apiFetch<{ user: User }>("/me", { method: "PATCH", body: data }),
-  setPassword: (new_password: string, current_password?: string) =>
-    apiFetch<void>("/me/password", { method: "PUT", body: { new_password, current_password } }),
-  uploadAvatar: (file: File) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    return apiFetch<{ user: User }>("/me/avatar", { method: "PUT", formData: fd });
+  /** `null` when there is no session (401 no_session / invalid / expired-and-unrefreshable). */
+  getMe: async (): Promise<Me | null> => {
+    try {
+      return await apiFetch<Me>("/me");
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 401) return null;
+      throw e;
+    }
   },
-  removeAvatar: () => apiFetch<{ user: User }>("/me/avatar", { method: "DELETE" }),
-  unlinkIdentity: (provider: Provider) =>
-    apiFetch<void>(`/me/identities/${provider}`, { method: "DELETE" }),
+  patchMe: (body: { public_supporter?: boolean; display_name?: string | null; preferred_currency?: string | null }) =>
+    apiFetch<{ customer: Customer }>("/me", { method: "PATCH", body }),
+  claim: (code: string) => apiFetch<{ payment: Payment }>("/claim", { method: "POST", body: { code } }),
+  createPortal: (return_to?: string) =>
+    apiFetch<{ url: string }>("/portal", { method: "POST", body: return_to ? { return_to } : {} }),
+  getEntitlements: (app: string) => apiFetch<Entitlements>(`/entitlements${q({ app })}`),
 };

@@ -1,10 +1,10 @@
-"""accounts' own feature switches ("features" in the API). Source of truth:
+"""payments' own feature switches ("features" in the API). Source of truth:
 PostHog; registry + fail-safe defaults live in
 ``packages/shared/feature_flags.json``.
 
 Resolution order:
 
-0. ``FEATURE_FLAG_OVERRIDES="signups=off,site-building=on"`` pins a switch
+0. ``FEATURE_FLAG_OVERRIDES="subscriptions=off,site-building=on"`` pins a switch
    regardless of everything else (local development and CI only).
 1. Self-host (``POSTHOG_API_KEY`` unset) — the registry's ``self_host`` value
    (ON unless the switch says otherwise). Zero network.
@@ -13,7 +13,7 @@ Resolution order:
 3. PostHog unreachable / flag undefined there — the per-switch ``default``.
 
 One PostHog project is shared with the other 3m4 apps, so the PostHog flag key
-is ``config.posthog_flag_prefix + key`` (``accounts-signups``). Registry keys,
+is ``config.posthog_flag_prefix + key`` (``payments-donations``). Registry keys,
 the API and the overrides all use the unprefixed key.
 
 Switch checks must never add request latency or raise: any failure falls back

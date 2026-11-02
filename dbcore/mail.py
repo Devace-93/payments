@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from .config import config
 
-log = logging.getLogger("accounts.mail")
+log = logging.getLogger("payments.mail")
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,7 @@ def build_message(
     msg["To"] = ", ".join(to)
     msg["Subject"] = subject
     msg["Date"] = formatdate(localtime=False)
-    msg["Message-ID"] = make_msgid(domain="accounts.3m4.net")
+    msg["Message-ID"] = make_msgid(domain="payments.3m4.net")
     if reply_to:
         msg["Reply-To"] = reply_to
     msg.set_content(text)

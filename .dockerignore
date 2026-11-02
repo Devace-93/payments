@@ -12,6 +12,7 @@
 **/.pytest_cache/
 **/.mypy_cache/
 **/.ruff_cache/
+services/api/tests/
 
 # Node / Qwik / Bun (rebuilt inside the image)
 **/node_modules/
@@ -28,4 +29,5 @@ apps/web/.qwik/
 deploy/
 e2e/
 *.log
+*.mmdb
 .DS_Store

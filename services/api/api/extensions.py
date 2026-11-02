@@ -2,16 +2,18 @@
 
 The rate limiter (Flask-Limiter, Redis-backed; ``memory://`` under tests via
 ``RATE_LIMIT_STORAGE_URI``, or disabled with ``RATE_LIMITS_ENABLED=false``)
-and the Authlib OAuth registry.
+and its key functions. Limits are evaluated before the view runs, so the
+identity bucket reads the JWT ``sub`` *without* verifying it: it only picks
+a bucket, the view still verifies the token.
 """
 from __future__ import annotations
 
-from authlib.integrations.flask_client import OAuth
 from flask import request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from dbcore.config import config
+from dbcore.m4session import COOKIE_NAME
 
 
 def client_ip() -> str:
@@ -22,19 +24,26 @@ def client_ip() -> str:
     return get_remote_address()
 
 
-def email_key() -> str:
-    """Rate-limit bucket by the e-mail in the JSON body (magic links)."""
-    data = request.get_json(silent=True) or {}
-    email = data.get("email") if isinstance(data, dict) else None
-    return f"email:{str(email).strip().lower()}" if email else client_ip()
+def _presented_session_token() -> str | None:
+    header = request.headers.get("Authorization", "")
+    if header.startswith("Bearer ") and not header[7:].strip().startswith("m4pay_sk_"):
+        return header[7:].strip() or None
+    return request.cookies.get(COOKIE_NAME) or None
 
 
-def user_key() -> str:
-    """Rate-limit bucket by the signed-in user (falls back to the IP)."""
-    from flask import g
+def identity_key() -> str:
+    """Rate-limit bucket by the session's ``sub`` (falls back to the IP)."""
+    token = _presented_session_token()
+    if token:
+        try:
+            import jwt
 
-    user = getattr(g, "user", None)
-    return f"user:{user.id}" if user is not None else client_ip()
+            sub = jwt.decode(token, options={"verify_signature": False}).get("sub")
+            if sub:
+                return f"identity:{sub}"
+        except Exception:
+            pass
+    return client_ip()
 
 
 limiter = Limiter(
@@ -44,5 +53,3 @@ limiter = Limiter(
     strategy="fixed-window",
     enabled=config.rate_limits_enabled,
 )
-
-oauth = OAuth()
