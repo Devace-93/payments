@@ -35,13 +35,11 @@ def iso(dt: datetime | None) -> str | None:
 
 def is_entitled(sub: Subscription, now: datetime | None = None) -> bool:
     """True while the subscription grants its entitlement."""
-    now = now or _now()
-    if sub.status in ENTITLED_STATUSES:
-        return True
-    if sub.cancel_at_period_end or sub.status == "canceled":
-        end = _aware(sub.current_period_end)
-        return bool(end and end > now and sub.status != "incomplete_expired")
-    return False
+    # ``cancel_at_period_end`` keeps Stripe's status ``active`` until the period
+    # ends, so it is covered by ENTITLED_STATUSES. A ``canceled`` status means
+    # the subscription has ended (immediate cancel or period over): no grant,
+    # whatever ``current_period_end`` still says.
+    return sub.status in ENTITLED_STATUSES
 
 
 def serialize_subscription(sub: Subscription | None, *, label: str | None = None) -> dict | None:

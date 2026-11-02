@@ -52,6 +52,12 @@ def test_badge_tiers(client):
     assert client.get("/badge/pro.json").get_json()["message"] == "pro"
     assert client.get("/badge/team.json").get_json()["message"] == "team"
     assert client.get("/badge/expro.json").get_json()["message"] == "pro"
+    # cancelled immediately: Stripe keeps current_period_end in the future, but access ended
+    cancelled_now = _customer("cxnow")
+    with session_scope() as session:
+        session.add(Subscription(stripe_subscription_id="s5", identity_id=cancelled_now, app_id=retro.id, entitlement="pro", status="canceled",
+                                 current_period_end=datetime.now(timezone.utc) + timedelta(days=20)))
+    assert client.get("/badge/cxnow.json").get_json()["message"] == "not a supporter"
     assert client.get(f"/badge/u/{team}.json").get_json()["color"] == "f59e0b"
     assert "#f59e0b" in client.get("/badge/pro.svg").get_data(as_text=True)
     assert client.get("/badge/SUPP.json").get_json()["message"] == "supporter"
