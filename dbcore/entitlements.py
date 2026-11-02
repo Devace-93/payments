@@ -12,8 +12,9 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.orm import object_session
 
-from .models import App, Subscription
+from .models import App, Product, Subscription
 
 ENTITLED_STATUSES = ("active", "trialing", "past_due")
 
@@ -45,10 +46,18 @@ def is_entitled(sub: Subscription, now: datetime | None = None) -> bool:
 def serialize_subscription(sub: Subscription | None, *, label: str | None = None) -> dict | None:
     if sub is None:
         return None
+    product = None
+    if sub.product_id is not None:
+        session = object_session(sub)
+        product = session.get(Product, sub.product_id) if session is not None else None
     out = {
         "id": str(sub.id),
+        "stripe_subscription_id": sub.stripe_subscription_id,
         "entitlement": sub.entitlement,
+        "key": product.key if product else None,
+        "interval": product.interval if product else None,
         "status": sub.status,
+        "current_period_start": iso(sub.current_period_start),
         "current_period_end": iso(sub.current_period_end),
         "cancel_at_period_end": bool(sub.cancel_at_period_end),
     }

@@ -40,7 +40,7 @@ os.environ["STRIPE_SECRET_KEY"] = ""
 os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_test_secret"
 os.environ["STRIPE_INTEGRATION_IDENTIFIER"] = "3m4-payments-testtest"
 os.environ["POSTHOG_API_KEY"] = ""
-os.environ["FEATURE_FLAG_OVERRIDES"] = ""
+os.environ["FEATURE_FLAG_OVERRIDES"] = "donations=on,subscriptions=on"  # both switches are OFF by default (gated rollout)
 os.environ["GEOIP_DB_PATH"] = "/nonexistent/GeoLite2-Country.mmdb"
 os.environ.pop("ALLOWED_ORIGINS", None)
 for var in ("CURRENCIES", "DEFAULT_CURRENCY", "MIN_NET_RATIO", "ISR_RATE", "FX_RATES_MXN", "DONATION_MAX_CENTS", "CLAIM_CODE_TTL_DAYS"):

@@ -124,7 +124,7 @@ Rules: `app` must exist and be active; `return_to` passes `safe_return_to` **and
 - `PATCH /api/me` `{public_supporter?, display_name?, preferred_currency?}` → `200 {customer}`.
 - `POST /api/claim` `{code}` (limits 5/minute per identity, 20/hour per IP) → `200 {payment}`; `400 invalid_code`, `410 expired_code`, `409 used_code`. Code normalisation: uppercase, strip spaces/dashes, Crockford base32 (I→1, O→0, L→1).
 - `POST /api/portal` `{return_to?}` → `200 {url}`; `404 no_customer`.
-- `GET /api/entitlements?app=retro` → `{app, entitlements:["pro"], subscription:{status, current_period_end, cancel_at_period_end}|null, updated_at}`.
+- `GET /api/entitlements?app=retro` → `{app, entitlements:["pro"], subscription:{id, stripe_subscription_id, entitlement, key, interval, status, current_period_start, current_period_end, cancel_at_period_end}|null, updated_at}`. The same subscription shape is used in `/api/me`, `/api/v1/subscriptions` items and push webhooks (`key` = product key such as `pro_monthly`, `interval` = `month|year`).
 
 ### Service (app backends)
 - `GET /api/v1/entitlements/<identity_id>?app=retro` → same body as above. `403 forbidden` if `app` ≠ the key's app.

@@ -8,14 +8,16 @@
       "created": "2026-11-01"
     },
     "donations": {
-      "description": "Donation checkout (POST /api/checkout kind=donation, /donate page, pay.js donate buttons). The Stripe webhook is NEVER gated.",
-      "default": true,
-      "created": "2026-11-01"
+      "description": "Donation checkout (POST /api/checkout kind=donation, /donate page, pay.js donate buttons). OFF by default everywhere: enable it in PostHog per user (distinct_id = the accounts `sub`) or for everyone when the rollout is public. Guests evaluate as `anonymous`. The Stripe webhook is NEVER gated.",
+      "default": false,
+      "created": "2026-11-01",
+      "self_host": false
     },
     "subscriptions": {
-      "description": "Subscription checkout and the Customer Portal (/subscribe, POST /api/portal). Entitlement reads are NEVER gated.",
+      "description": "Subscription checkout and the Customer Portal (/subscribe, POST /api/portal). OFF by default everywhere: enable per user in PostHog (distinct_id = `sub`). Entitlement reads and webhooks are NEVER gated.",
       "default": false,
-      "created": "2026-11-01"
+      "created": "2026-11-01",
+      "self_host": false
     },
     "badges": {
       "description": "Supporter badges (/badge/*) and the embed snippets on /me. OFF serves the grey 'not a supporter' badge for everyone.",

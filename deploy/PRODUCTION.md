@@ -161,6 +161,37 @@ for ~10 minutes).
     until retro is migrated), `badges`, `fee-hint`. The Stripe webhook and the
     entitlement reads are never gated.
 
+## Gated rollout: who can pay
+
+Every paying surface is behind a feature switch that is **OFF by default** and
+evaluated **per user** (PostHog `distinct_id` = the accounts `sub`; guests are
+`anonymous`):
+
+| Switch (PostHog key) | Gates | Never gated |
+|---|---|---|
+| `payments-donations` | `/donate`, `pay.js` donate buttons, `POST /api/checkout kind=donation` | Stripe webhook, `/badge/*`, `/api/public/supporters` |
+| `payments-subscriptions` | `/subscribe`, `POST /api/checkout kind=subscription`, `POST /api/portal` | entitlement reads (`/api/entitlements`, `/api/v1/*`), push webhooks |
+
+The relying apps keep their own gates (retro: `retro-early-access` ON hides
+billing and the donate button; `retro-billing` gates the paywall per account).
+
+To authorise someone:
+
+1. Find their `sub` (accounts → the user's id; also shown as `identity.id` in
+   payments' `GET /api/me`).
+2. PostHog → Feature flags → `payments-donations` (and/or
+   `payments-subscriptions`) → release condition **"distinct_id is one of …"**
+   with the `sub`s, rollout 100 % for that condition, flag enabled.
+3. For retro, add the same person to `retro-early-access` with the inverse
+   semantics (the flag must evaluate **false** for them) and keep
+   `retro-billing` true.
+4. Public launch = the same flags at 100 % for everyone. No deploy needed for
+   any of these steps; the API evaluates flags locally (needs
+   `POSTHOG_PERSONAL_API_KEY`) and falls back to the registry default (OFF).
+
+Local development and CI pin them on with
+`FEATURE_FLAG_OVERRIDES=donations=on,subscriptions=on` (see `.env.example`).
+
 ## Updates
 
 ```sh

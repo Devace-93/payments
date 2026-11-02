@@ -34,6 +34,7 @@ jobs:
           set_var VITE_APP_URL http://localhost:8086
           set_var VITE_ACCOUNTS_URL http://localhost:8085
           set_var STRIPE_SECRET_KEY ""
+          set_var FEATURE_FLAG_OVERRIDES "donations=on,subscriptions=on"
           set_var STRIPE_WEBHOOK_SECRET ""
           set_var POSTHOG_API_KEY ""
           set_var POSTHOG_PERSONAL_API_KEY ""
