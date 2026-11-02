@@ -3,7 +3,7 @@
     python -m dbcore.cli upgrade              # create_all + alembic upgrade head
     python -m dbcore.cli migrate              # alembic upgrade head only
     python -m dbcore.cli create-all           # SQLAlchemy create_all only
-    python -m dbcore.cli sync-catalog         # catalog.json → apps/products (+ Stripe price ids)
+    python -m dbcore.cli sync-catalog         # catalog.json → apps/products (+ Stripe price ids); --lenient = never fail on missing prices (boot)
     python -m dbcore.cli create-prices        # create the missing Stripe products/prices
     python -m dbcore.cli app-key <slug> [webhook_url]   # new service key + webhook secret (printed once)
     python -m dbcore.cli seed-completed <cs_id>         # fake-mode: run the checkout.session.completed path
@@ -54,13 +54,15 @@ def migrate() -> None:
     print("✓ migrations applied")
 
 
-def sync_catalog() -> None:
+def sync_catalog(*, strict: bool = True) -> None:
+    """``--lenient`` (used by the compose ``migrate`` service) never fails the
+    boot on lookup keys Stripe lacks; run it strict by hand after ``create-prices``."""
     from .catalog import sync_catalog as _sync
     from .stripe_client import client, is_fake
 
     stripe = client()
     with session_scope() as session:
-        counts = _sync(session, stripe)
+        counts = _sync(session, stripe, strict=strict)
     mode = "fake price ids" if is_fake(stripe) else "Stripe lookup keys"
     print(f"✓ catalog synced: {counts['apps']} app(s), {counts['products']} product(s) ({mode})")
 
@@ -181,7 +183,7 @@ def main(argv: list[str]) -> int:
     elif cmd == "create-all":
         create_all()
     elif cmd == "sync-catalog":
-        sync_catalog()
+        sync_catalog(strict="--lenient" not in argv)
     elif cmd == "create-prices":
         create_prices()
     elif cmd == "app-key":

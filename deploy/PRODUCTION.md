@@ -50,7 +50,7 @@ for ~10 minutes).
    ```
    Container names are stable (`payments-api-1`, `payments-web-1`,
    `payments-worker-1`). The `migrate` service runs
-   `python -m dbcore.cli upgrade && python -m dbcore.cli sync-catalog` before
+   `python -m dbcore.cli upgrade && python -m dbcore.cli sync-catalog --lenient` before
    the API starts; the sync fails loudly when a catalog `lookup_key` has no
    Stripe price (run `cli create-prices` first, step 6.3).
 4. **Edge routing** — in `/opt/3m4/deploy/Caddyfile.prod` add this block next

@@ -13,12 +13,16 @@
 """
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import select
 
 from . import fees
 from ._shared import load_shared
 from .models import App, Product
 from .origins import OriginMatcher
+
+log = logging.getLogger("payments.catalog")
 
 DONATION_APP = "3m4"
 
@@ -86,7 +90,7 @@ def _price_index(stripe, lookup_keys: list[str]) -> dict[str, dict]:
     return found
 
 
-def _resolve(stripe, lookup_keys: list[str]) -> dict[str, dict]:
+def _resolve(stripe, lookup_keys: list[str], *, strict: bool = True) -> dict[str, dict]:
     from .stripe_client import is_fake
 
     found = _price_index(stripe, lookup_keys)
@@ -95,15 +99,25 @@ def _resolve(stripe, lookup_keys: list[str]) -> dict[str, dict]:
         for key in missing:
             found[key] = {"price": f"price_fake_{key}", "product": f"prod_fake_{key}"}
         missing = []
-    if missing:
+    if missing and strict:
         raise RuntimeError(
             "catalog lookup keys without a Stripe price: " + ", ".join(missing) + " (run `python -m dbcore.cli create-prices`)"
+        )
+    if missing:
+        log.warning(
+            "catalog lookup keys without a Stripe price (products kept without price ids): %s — run `python -m dbcore.cli create-prices`",
+            ", ".join(missing),
         )
     return found
 
 
-def sync_catalog(session, stripe) -> dict:
-    """Mirror the JSON into the DB; returns ``{apps, products}`` counts."""
+def sync_catalog(session, stripe, *, strict: bool = True) -> dict:
+    """Mirror the JSON into the DB; returns ``{apps, products}`` counts.
+
+    ``strict=False`` (the boot-time run in the ``migrate`` service) tolerates
+    lookup keys that Stripe does not have yet: the products are still written
+    (without price ids) so the stack always starts; checkout answers
+    ``unknown_price`` for them until ``create-prices`` + a strict sync."""
     data = load()
     apps = 0
     products = 0
@@ -156,9 +170,9 @@ def sync_catalog(session, stripe) -> dict:
                     },
                 )
             )
-    resolved = _resolve(stripe, [fields["lookup_key"] for _, _, fields in wanted])
+    resolved = _resolve(stripe, [fields["lookup_key"] for _, _, fields in wanted], strict=strict)
     for app, key, fields in wanted:
-        ids = resolved[fields["lookup_key"]]
+        ids = resolved.get(fields["lookup_key"]) or {"price": None, "product": None}
         _upsert_product(session, app, key, stripe_price_id=ids["price"], stripe_product_id=ids["product"], **fields)
         products += 1
     return {"apps": apps, "products": products}

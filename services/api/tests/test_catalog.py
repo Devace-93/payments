@@ -97,3 +97,23 @@ def test_cli_sync_catalog(client, capsys):
 
     assert cli.main(["cli", "sync-catalog"]) == 0
     assert "catalog synced" in capsys.readouterr().out
+
+
+def test_sync_catalog_lenient_without_prices(client, monkeypatch):
+    """Boot-time sync must never block the stack: with real Stripe lacking the
+    lookup keys, lenient mode writes the products without price ids and strict
+    mode raises."""
+    import pytest
+
+    from dbcore import catalog
+    from dbcore.models import Product
+
+    monkeypatch.setattr(catalog, "_price_index", lambda stripe, keys: {})
+    monkeypatch.setattr("dbcore.stripe_client.is_fake", lambda s: False)
+    with session_scope() as session:
+        with pytest.raises(RuntimeError):
+            catalog.sync_catalog(session, object(), strict=True)
+    with session_scope() as session:
+        counts = catalog.sync_catalog(session, object(), strict=False)
+        assert counts["products"] >= 5
+        assert all(p.stripe_price_id is None for p in session.scalars(select(Product)))
