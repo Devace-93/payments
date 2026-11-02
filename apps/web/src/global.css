@@ -58,6 +58,13 @@
   --c-green-700: 21 128 61;
   --c-green-800: 22 101 52;
   --c-green-900: 20 83 45;
+  /* Informational (sky in light, deep blue with light text in dark) */
+  --c-info-50: 240 249 255;
+  --c-info-100: 224 242 254;
+  --c-info-200: 186 230 253;
+  --c-info-400: 56 189 248;
+  --c-info-700: 3 105 161;
+  --c-info-800: 7 89 133;
 }
 
 /* Dark theme: system preference unless the user chose light explicitly … */
@@ -117,6 +124,12 @@
     --c-green-700: 134 239 172;
     --c-green-800: 187 247 208;
     --c-green-900: 220 252 231;
+    --c-info-50: 8 47 73;
+    --c-info-100: 12 74 110;
+    --c-info-200: 7 89 133;
+    --c-info-400: 14 165 233;
+    --c-info-700: 125 211 252;
+    --c-info-800: 186 230 253;
   }
 }
 
@@ -176,6 +189,12 @@
   --c-green-700: 134 239 172;
   --c-green-800: 187 247 208;
   --c-green-900: 220 252 231;
+  --c-info-50: 8 47 73;
+  --c-info-100: 12 74 110;
+  --c-info-200: 7 89 133;
+  --c-info-400: 14 165 233;
+  --c-info-700: 125 211 252;
+  --c-info-800: 186 230 253;
 }
 
 html {
@@ -229,6 +248,6 @@ body {
     @apply rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800;
   }
   .alert-info {
-    @apply rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800;
+    @apply rounded-lg border border-info-200 bg-info-50 px-3 py-2 text-sm text-info-800;
   }
 }

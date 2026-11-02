@@ -6,6 +6,9 @@ const ko: PartialCatalog = {
   "nav.home": "홈",
   "nav.me": "내 후원",
   "nav.login": "로그인",
+  "nav.signup": "가입하기",
+  "nav.logout": "로그아웃",
+  "nav.signedInAs": "@{handle}(으)로 로그인됨",
 
   "footer.madeBy": "제작: Enrique Magallón",
   "footer.source": "소스 코드",

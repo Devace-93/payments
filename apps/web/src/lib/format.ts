@@ -17,3 +17,13 @@ export function formatDateTime(iso: string | null | undefined, lang: string): st
     return iso;
   }
 }
+
+/**
+ * Append a cache-busting `v=` to a URL. The badge SVG is served with
+ * `Cache-Control: public, max-age=…`, so a preview rendered right after a
+ * donation / claim would otherwise show the stale cached copy. Use it on
+ * previews only — never on the copyable snippets.
+ */
+export function withCacheBust(url: string, rev: number | string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(rev))}`;
+}

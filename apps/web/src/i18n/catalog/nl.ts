@@ -6,6 +6,9 @@ const nl: PartialCatalog = {
   "nav.home": "Home",
   "nav.me": "Jouw steun",
   "nav.login": "Inloggen",
+  "nav.signup": "Account aanmaken",
+  "nav.logout": "Uitloggen",
+  "nav.signedInAs": "Ingelogd als @{handle}",
 
   "footer.madeBy": "Gemaakt door Enrique Magallón",
   "footer.source": "Broncode",

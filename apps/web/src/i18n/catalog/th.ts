@@ -6,6 +6,9 @@ const th: PartialCatalog = {
   "nav.home": "หน้าแรก",
   "nav.me": "การสนับสนุนของคุณ",
   "nav.login": "เข้าสู่ระบบ",
+  "nav.signup": "สมัครสมาชิก",
+  "nav.logout": "ออกจากระบบ",
+  "nav.signedInAs": "เข้าสู่ระบบในชื่อ @{handle}",
 
   "footer.madeBy": "สร้างโดย Enrique Magallón",
   "footer.source": "ซอร์สโค้ด",

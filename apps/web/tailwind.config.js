@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  // Component classes are tree-shaken like utilities; keep the alert variants
+  // even while no page references one statically (pages toggle them at runtime).
+  safelist: ["alert-info", "alert-ok", "alert-warn", "alert-error"],
   theme: {
     extend: {
       colors: {
@@ -58,6 +61,15 @@ export default {
           700: "rgb(var(--c-amber-700) / <alpha-value>)",
           800: "rgb(var(--c-amber-800) / <alpha-value>)",
           900: "rgb(var(--c-amber-900) / <alpha-value>)",
+        },
+        // Informational surfaces (`.alert-info`, the "Your support" card).
+        info: {
+          50: "rgb(var(--c-info-50) / <alpha-value>)",
+          100: "rgb(var(--c-info-100) / <alpha-value>)",
+          200: "rgb(var(--c-info-200) / <alpha-value>)",
+          400: "rgb(var(--c-info-400) / <alpha-value>)",
+          700: "rgb(var(--c-info-700) / <alpha-value>)",
+          800: "rgb(var(--c-info-800) / <alpha-value>)",
         },
         green: {
           50: "rgb(var(--c-green-50) / <alpha-value>)",

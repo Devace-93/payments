@@ -3,6 +3,9 @@ export const chrome = {
   "nav.home": "Home",
   "nav.me": "Your support",
   "nav.login": "Log in",
+  "nav.signup": "Sign up",
+  "nav.logout": "Log out",
+  "nav.signedInAs": "Signed in as @{handle}",
 
   "footer.madeBy": "Made by Enrique Magallón",
   "footer.source": "Source",

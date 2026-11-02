@@ -2,7 +2,7 @@ import { component$, useContext, useSignal, useStore, useVisibleTask$, $ } from 
 import { Link, useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { api, ApiRequestError, loginUrl } from "../../../lib/api";
 import { formatAmount, rememberCurrency } from "../../../lib/currency";
-import { formatDate } from "../../../lib/format";
+import { formatDate, withCacheBust } from "../../../lib/format";
 import { FeaturesContext } from "../../../lib/features";
 import type { Me } from "../../../lib/types";
 import { CopyField } from "../../../components/copy-field";
@@ -32,6 +32,10 @@ export default component$(() => {
   const portal = useStore({ busy: false, error: "" });
   const pub = useStore({ on: false, name: "", saving: false, msg: "", error: "" });
   const cur = useStore({ value: "", saving: false, msg: "", error: "" });
+  // Bumped after every load / mutation so the badge *preview* bypasses the
+  // browser cache (the API serves the SVG with a public max-age). The copyable
+  // snippets keep the clean URLs.
+  const badgeRev = useSignal(0);
 
   const openPortal = $(async () => {
     if (portal.busy) return;
@@ -55,6 +59,7 @@ export default component$(() => {
         return;
       }
       me.value = data;
+      badgeRev.value = Date.now();
       pub.on = data.customer.public_supporter;
       pub.name = data.customer.display_name ?? data.identity.name ?? data.identity.handle;
       cur.value = data.customer.preferred_currency ?? "";
@@ -81,6 +86,7 @@ export default component$(() => {
     try {
       const res = await api.patchMe({ public_supporter: pub.on, display_name: pub.on ? pub.name.trim() || null : undefined });
       me.value = { ...me.value, customer: res.customer };
+      badgeRev.value = Date.now();
       pub.msg = tr(i18n, "common.saved");
     } catch (e) {
       pub.error = errorText(i18n, e);
@@ -97,6 +103,7 @@ export default component$(() => {
     try {
       const res = await api.patchMe({ preferred_currency: cur.value || null });
       me.value = { ...me.value, customer: res.customer };
+      badgeRev.value = Date.now();
       if (cur.value) rememberCurrency(cur.value);
       cur.msg = tr(i18n, "common.saved");
     } catch (e) {
@@ -304,7 +311,7 @@ export default component$(() => {
         {features.badges ? (
           <>
             <p class="mt-1 text-sm text-slate-500">{tr(i18n, "pay.badgeBody")}</p>
-            <img src={data.badge.svg_url} alt="" height="20" class="mt-4 h-5" data-testid="badge-img" />
+            <img src={withCacheBust(data.badge.svg_url, badgeRev.value)} alt="" height="20" class="mt-4 h-5" data-testid="badge-img" />
             <div class="mt-4 space-y-3">
               <CopyField id="badge-markdown" label={tr(i18n, "pay.badgeMarkdown")} value={data.badge.markdown} />
               <CopyField id="badge-html" label={tr(i18n, "pay.badgeHtml")} value={data.badge.html} />

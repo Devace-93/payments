@@ -8,6 +8,8 @@ export type CheckoutKind = "donation" | "subscription";
 export interface AppRef {
   slug: string;
   name: string;
+  /** Absolute image URL of the app's icon, `null` when the app has none. */
+  icon?: string | null;
 }
 
 export interface Product {

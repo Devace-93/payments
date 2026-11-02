@@ -6,3 +6,4 @@ export { ThemeToggle } from "./theme-toggle";
 export { BuildingState } from "./building-state";
 export { CurrencySelect } from "./currency-select";
 export { CopyField } from "./copy-field";
+export { AppIcon } from "./app-icon";

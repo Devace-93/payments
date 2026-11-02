@@ -5,6 +5,7 @@ import { formatAmount, resolveCurrency } from "../../lib/currency";
 import { FeaturesContext } from "../../lib/features";
 import type { Catalog } from "../../lib/types";
 import { CurrencySelect } from "../../components/currency-select";
+import { AppIcon } from "../../components/app-icon";
 import { tr, trError, useI18n } from "../../i18n";
 
 /**
@@ -32,10 +33,23 @@ export default component$(() => {
   const catalog = useSignal<Catalog | null>(null);
   const currency = useSignal("usd");
   const state = useStore({ error: "", loading: !!app });
+  /** slug → icon URL for the picker (each app's catalog is public and cached 5 min). */
+  const icons = useStore<Record<string, string | null>>({});
 
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
-    if (!app) return;
+    if (!app) {
+      await Promise.all(
+        KNOWN_APPS.map(async (a) => {
+          try {
+            icons[a.slug] = (await api.getCatalog(a.slug)).app.icon ?? null;
+          } catch {
+            icons[a.slug] = null;
+          }
+        }),
+      );
+      return;
+    }
     try {
       const [cat, me] = await Promise.all([api.getCatalog(app), api.getMe().catch(() => null)]);
       catalog.value = cat;
@@ -57,12 +71,12 @@ export default component$(() => {
         </header>
 
         {hasSession.value && (
-          <Link href="/me" class="card flex items-center justify-between gap-3 border-sky-200 bg-sky-50 p-5 hover:border-sky-400" data-testid="me-link">
+          <Link href="/me" class="card flex items-center justify-between gap-3 border-info-200 bg-info-50 p-5 hover:border-info-400" data-testid="me-link">
             <div>
               <div class="font-semibold text-slate-900">{tr(i18n, "pay.yourSupport")}</div>
               <div class="text-sm text-slate-500">{tr(i18n, "pay.yourSupportHint")}</div>
             </div>
-            <span aria-hidden="true" class="text-sky-700">
+            <span aria-hidden="true" class="text-info-700">
               →
             </span>
           </Link>
@@ -73,9 +87,12 @@ export default component$(() => {
           <ul class="grid gap-3 sm:grid-cols-2" data-testid="app-picker">
             {KNOWN_APPS.map((a) => (
               <li key={a.slug}>
-                <Link href={`/?app=${a.slug}`} class="card block p-5 hover:border-primary-400">
-                  <div class="font-semibold text-slate-900">{a.name}</div>
-                  <div class="text-xs text-slate-400">{a.url.replace(/^https?:\/\//, "")}</div>
+                <Link href={`/?app=${a.slug}`} class="card flex items-center gap-3 p-5 hover:border-primary-400">
+                  <AppIcon name={a.name} icon={icons[a.slug]} />
+                  <div class="min-w-0">
+                    <div class="font-semibold text-slate-900">{a.name}</div>
+                    <div class="truncate text-xs text-slate-400">{a.url.replace(/^https?:\/\//, "")}</div>
+                  </div>
                 </Link>
               </li>
             ))}
@@ -116,7 +133,10 @@ export default component$(() => {
             </Link>{" "}
             / {name}
           </p>
-          <h1 class="text-3xl font-bold tracking-tight text-slate-900">{tr(i18n, "pay.donateTitle", { app: name })}</h1>
+          <div class="flex items-center gap-3">
+            {cat && <AppIcon name={name} icon={cat.app.icon} />}
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">{tr(i18n, "pay.donateTitle", { app: name })}</h1>
+          </div>
         </div>
         {cat && (
           <div class="w-28">

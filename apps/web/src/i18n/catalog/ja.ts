@@ -6,6 +6,9 @@ const ja: PartialCatalog = {
   "nav.home": "ホーム",
   "nav.me": "あなたのサポート",
   "nav.login": "ログイン",
+  "nav.signup": "新規登録",
+  "nav.logout": "ログアウト",
+  "nav.signedInAs": "@{handle} としてログイン中",
 
   "footer.madeBy": "制作：Enrique Magallón",
   "footer.source": "ソースコード",

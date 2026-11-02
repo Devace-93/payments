@@ -5,6 +5,9 @@ const uk: PartialCatalog = {
   "nav.home": "Головна",
   "nav.me": "Ваша підтримка",
   "nav.login": "Увійти",
+  "nav.signup": "Зареєструватися",
+  "nav.logout": "Вийти",
+  "nav.signedInAs": "Ви увійшли як @{handle}",
 
   "footer.madeBy": "Автор: Enrique Magallón",
   "footer.source": "Вихідний код",

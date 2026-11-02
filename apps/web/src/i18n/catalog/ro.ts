@@ -5,6 +5,9 @@ const ro: PartialCatalog = {
   "nav.home": "Acasă",
   "nav.me": "Sprijinul tău",
   "nav.login": "Autentificare",
+  "nav.signup": "Creează cont",
+  "nav.logout": "Deconectare",
+  "nav.signedInAs": "Autentificat ca @{handle}",
 
   "footer.madeBy": "Creat de Enrique Magallón",
   "footer.source": "Cod sursă",

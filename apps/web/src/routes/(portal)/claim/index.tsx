@@ -2,6 +2,7 @@ import { component$, useContext, useSignal, useStore, useVisibleTask$, $ } from 
 import { Link, useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { api, ApiRequestError, loginUrl } from "../../../lib/api";
 import { formatAmount } from "../../../lib/currency";
+import { withCacheBust } from "../../../lib/format";
 import { FeaturesContext } from "../../../lib/features";
 import type { Me, Payment } from "../../../lib/types";
 import { CopyField } from "../../../components/copy-field";
@@ -24,6 +25,8 @@ export default component$(() => {
   const features = useContext(FeaturesContext);
   const me = useSignal<Me | null>(null);
   const payment = useSignal<Payment | null>(null);
+  /** Set when the claim lands: the badge preview must bypass the browser cache (see /me). */
+  const badgeRev = useSignal(0);
   const state = useStore({ code: prettyCode(loc.url.searchParams.get("code") || ""), loading: true, busy: false, error: "", gated: false });
 
   // eslint-disable-next-line qwik/no-use-visible-task
@@ -56,6 +59,7 @@ export default component$(() => {
       const res = await api.claim(code);
       payment.value = res.payment;
       me.value = (await api.getMe().catch(() => me.value)) ?? me.value;
+      badgeRev.value = Date.now();
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 401) {
         location.assign(loginUrl(location.href));
@@ -94,7 +98,7 @@ export default component$(() => {
         {badge && features.badges && (
           <section class="mt-6 space-y-3 border-t border-slate-200 pt-6">
             <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, "pay.badge")}</h2>
-            <img src={badge.svg_url} alt="" height="20" class="h-5" data-testid="badge-img" />
+            <img src={withCacheBust(badge.svg_url, badgeRev.value)} alt="" height="20" class="h-5" data-testid="badge-img" />
             <CopyField id="badge-markdown" label={tr(i18n, "pay.badgeMarkdown")} value={badge.markdown} />
             <CopyField id="badge-html" label={tr(i18n, "pay.badgeHtml")} value={badge.html} />
           </section>

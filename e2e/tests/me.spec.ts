@@ -17,6 +17,10 @@ test.describe("me", () => {
     const { handle } = await signup(page.request);
     await page.goto("/me");
     await expect(page.getByTestId("me-handle")).toContainText(handle);
+    // Header shows the session: @handle → /me, "Log out" → accounts' hosted logout page.
+    await expect(page.getByTestId("nav-handle")).toContainText(`@${handle}`);
+    expect(await page.getByTestId("nav-logout").getAttribute("href")).toMatch(new RegExp(`^${ACCOUNTS_URL}/logout\\?return_to=`));
+    await expect(page.getByTestId("nav-login")).toHaveCount(0);
     await expect(page.getByTestId("public-toggle")).not.toBeChecked();
     await page.getByTestId("public-toggle").check();
     await page.getByTestId("display-name").fill("Ana E2E");

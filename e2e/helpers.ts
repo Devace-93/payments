@@ -25,7 +25,7 @@ export interface User {
 
 /** CONTRACT.md §3 catalog (the parts the tests read). */
 export interface Catalog {
-  app: { slug: string; name: string };
+  app: { slug: string; name: string; icon?: string | null };
   currencies: string[];
   default_currency: string;
   donation: { presets: Record<string, number[]>; min: Record<string, number>; max: Record<string, number> };
@@ -38,7 +38,7 @@ export interface Checkout {
   id: string;
   status: "created" | "open" | "completed" | "expired";
   kind: "donation" | "subscription";
-  app: { slug: string; name: string };
+  app: { slug: string; name: string; icon?: string | null };
   amount: number;
   currency: string;
   needs_claim: boolean;

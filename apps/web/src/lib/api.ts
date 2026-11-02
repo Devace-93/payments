@@ -114,6 +114,12 @@ export function signupUrl(returnTo?: string): string {
   return `${ACCOUNTS_URL}/signup?return_to=${encodeURIComponent(back)}`;
 }
 
+/** Hosted logout on accounts (clears the `.3m4.net` cookie), coming back to the current page. */
+export function logoutUrl(returnTo?: string): string {
+  const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
+  return `${ACCOUNTS_URL}/logout?return_to=${encodeURIComponent(back)}`;
+}
+
 const q = (params: Record<string, string | number | undefined>): string => {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") sp.set(k, String(v));

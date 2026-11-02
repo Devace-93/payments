@@ -5,6 +5,9 @@ const el: PartialCatalog = {
   "nav.home": "Αρχική",
   "nav.me": "Η υποστήριξή σας",
   "nav.login": "Σύνδεση",
+  "nav.signup": "Εγγραφή",
+  "nav.logout": "Αποσύνδεση",
+  "nav.signedInAs": "Συνδεδεμένος/η ως @{handle}",
 
   "footer.madeBy": "Από τον Enrique Magallón",
   "footer.source": "Πηγαίος κώδικας",

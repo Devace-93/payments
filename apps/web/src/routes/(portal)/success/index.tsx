@@ -5,6 +5,7 @@ import { formatAmount } from "../../../lib/currency";
 import { isAllowedReturn } from "../../../lib/returnTo";
 import { capture } from "../../../lib/analytics";
 import type { Checkout } from "../../../lib/types";
+import { AppIcon } from "../../../components/app-icon";
 import { tr, trError, useI18n } from "../../../i18n";
 
 const POLL_MS = 2000;
@@ -138,6 +139,12 @@ export default component$(() => {
       <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green-100 text-2xl" aria-hidden="true">
         ✓
       </div>
+      {c && name && (
+        <div class="mt-3 flex items-center justify-center gap-2 text-sm text-slate-500" data-testid="success-app">
+          <AppIcon name={name} icon={c.app.icon} size="sm" />
+          <span>{name}</span>
+        </div>
+      )}
       {c?.kind === "subscription" ? (
         <>
           <h1 class="mt-4 text-2xl font-bold text-slate-900">{tr(i18n, "pay.subscribedTitle")}</h1>

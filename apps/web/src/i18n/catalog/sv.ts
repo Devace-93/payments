@@ -6,6 +6,9 @@ const sv: PartialCatalog = {
   "nav.home": "Hem",
   "nav.me": "Ditt stöd",
   "nav.login": "Logga in",
+  "nav.signup": "Skapa konto",
+  "nav.logout": "Logga ut",
+  "nav.signedInAs": "Inloggad som @{handle}",
 
   "footer.madeBy": "Skapad av Enrique Magallón",
   "footer.source": "Källkod",

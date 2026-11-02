@@ -6,6 +6,9 @@ const vi: PartialCatalog = {
   "nav.home": "Trang chủ",
   "nav.me": "Ủng hộ của bạn",
   "nav.login": "Đăng nhập",
+  "nav.signup": "Đăng ký",
+  "nav.logout": "Đăng xuất",
+  "nav.signedInAs": "Đã đăng nhập là @{handle}",
 
   "footer.madeBy": "Tạo bởi Enrique Magallón",
   "footer.source": "Mã nguồn",

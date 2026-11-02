@@ -5,6 +5,9 @@ const es: PartialCatalog = {
   "nav.home": "Inicio",
   "nav.me": "Tu apoyo",
   "nav.login": "Iniciar sesión",
+  "nav.signup": "Crear cuenta",
+  "nav.logout": "Cerrar sesión",
+  "nav.signedInAs": "Sesión iniciada como @{handle}",
 
   "footer.madeBy": "Hecho por Enrique Magallón",
   "footer.source": "Código fuente",

@@ -5,6 +5,9 @@ const cs: PartialCatalog = {
   "nav.home": "Domů",
   "nav.me": "Vaše podpora",
   "nav.login": "Přihlásit se",
+  "nav.signup": "Zaregistrovat se",
+  "nav.logout": "Odhlásit se",
+  "nav.signedInAs": "Přihlášeno jako @{handle}",
 
   "footer.madeBy": "Vytvořil Enrique Magallón",
   "footer.source": "Zdrojový kód",

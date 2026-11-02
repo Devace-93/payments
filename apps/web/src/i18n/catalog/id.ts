@@ -6,6 +6,9 @@ const id: PartialCatalog = {
   "nav.home": "Beranda",
   "nav.me": "Dukungan Anda",
   "nav.login": "Masuk",
+  "nav.signup": "Daftar",
+  "nav.logout": "Keluar",
+  "nav.signedInAs": "Masuk sebagai @{handle}",
 
   "footer.madeBy": "Dibuat oleh Enrique Magallón",
   "footer.source": "Kode sumber",

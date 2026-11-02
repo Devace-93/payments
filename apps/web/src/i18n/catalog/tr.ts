@@ -5,6 +5,9 @@ const tr: PartialCatalog = {
   "nav.home": "Ana sayfa",
   "nav.me": "Desteğiniz",
   "nav.login": "Giriş yap",
+  "nav.signup": "Kaydol",
+  "nav.logout": "Çıkış yap",
+  "nav.signedInAs": "@{handle} olarak giriş yapıldı",
 
   "footer.madeBy": "Enrique Magallón tarafından yapıldı",
   "footer.source": "Kaynak kodu",

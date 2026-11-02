@@ -5,6 +5,9 @@ const ru: PartialCatalog = {
   "nav.home": "Главная",
   "nav.me": "Ваша поддержка",
   "nav.login": "Войти",
+  "nav.signup": "Зарегистрироваться",
+  "nav.logout": "Выйти",
+  "nav.signedInAs": "Вы вошли как @{handle}",
 
   "footer.madeBy": "Автор: Enrique Magallón",
   "footer.source": "Исходный код",

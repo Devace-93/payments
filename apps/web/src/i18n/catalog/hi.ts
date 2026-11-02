@@ -6,6 +6,9 @@ const hi: PartialCatalog = {
   "nav.home": "होम",
   "nav.me": "आपका सहयोग",
   "nav.login": "लॉग इन करें",
+  "nav.signup": "साइन अप करें",
+  "nav.logout": "लॉग आउट करें",
+  "nav.signedInAs": "@{handle} के रूप में लॉग इन",
 
   "footer.madeBy": "Enrique Magallón द्वारा बनाया गया",
   "footer.source": "सोर्स कोड",

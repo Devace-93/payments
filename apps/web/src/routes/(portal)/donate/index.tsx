@@ -7,6 +7,7 @@ import { readOrigin, readReturnToOrNone } from "../../../lib/returnTo";
 import { capture } from "../../../lib/analytics";
 import type { Catalog, Me } from "../../../lib/types";
 import { CurrencySelect } from "../../../components/currency-select";
+import { AppIcon } from "../../../components/app-icon";
 import { tr, trError, useI18n } from "../../../i18n";
 
 const MESSAGE_MAX = 200;
@@ -154,7 +155,10 @@ export default component$(() => {
 
   return (
     <div class="card p-8">
-      <h1 class="text-2xl font-bold text-slate-900">{tr(i18n, "pay.donateTitle", { app: name })}</h1>
+      <div class="flex items-center gap-3">
+        {cat && <AppIcon name={name} icon={cat.app.icon} />}
+        <h1 class="text-2xl font-bold text-slate-900">{tr(i18n, "pay.donateTitle", { app: name })}</h1>
+      </div>
       <p class="mt-1 text-sm text-slate-500">{tr(i18n, "pay.donateSubtitle")}</p>
       {me.value && (
         <p class="mt-2 text-sm text-primary-700" data-testid="donating-as">

@@ -5,6 +5,9 @@ const ptPT: PartialCatalog = {
   // chrome
   "nav.me": "O seu apoio",
   "nav.login": "Iniciar sessão",
+  "nav.signup": "Criar conta",
+  "nav.logout": "Terminar sessão",
+  "nav.signedInAs": "Sessão iniciada como @{handle}",
 
   "ui.search": "Pesquisar",
 

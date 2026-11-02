@@ -6,6 +6,9 @@ const ar: PartialCatalog = {
   "nav.home": "الرئيسية",
   "nav.me": "دعمك",
   "nav.login": "تسجيل الدخول",
+  "nav.signup": "إنشاء حساب",
+  "nav.logout": "تسجيل الخروج",
+  "nav.signedInAs": "مسجّل الدخول كـ @{handle}",
 
   "footer.madeBy": "من صنع Enrique Magallón",
   "footer.source": "الكود المصدري",

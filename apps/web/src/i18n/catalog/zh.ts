@@ -6,6 +6,9 @@ const zh: PartialCatalog = {
   "nav.home": "首页",
   "nav.me": "你的支持",
   "nav.login": "登录",
+  "nav.signup": "注册",
+  "nav.logout": "退出登录",
+  "nav.signedInAs": "已登录为 @{handle}",
 
   "footer.madeBy": "由 Enrique Magallón 制作",
   "footer.source": "源代码",
