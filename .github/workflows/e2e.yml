@@ -23,13 +23,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The suite signs up / logs in through accounts.3m4.net's stack (login
+      # gate, claim, /me), so the identity provider runs next to payments on
+      # the shared `edge` network (public repo, same recipe as its own CI).
+      - name: Check out accounts (identity provider for the suite)
+        uses: actions/checkout@v4
+        with:
+          repository: Devace-93/accounts
+          path: .accounts
+
+      - name: Start accounts
+        working-directory: .accounts
+        run: |
+          cp .env.example .env
+          set_var() { sed -i "s|^$1=.*|$1=$2|" .env; grep -q "^$1=" .env || echo "$1=$2" >> .env; }
+          set_var ACCOUNTS_URL http://localhost:8085
+          set_var VITE_API_URL http://localhost:8085/api
+          set_var VITE_APP_URL http://localhost:8085
+          set_var COOKIE_DOMAIN ""
+          set_var COOKIE_SECURE false
+          set_var POSTHOG_API_KEY ""
+          set_var POSTHOG_PERSONAL_API_KEY ""
+          set_var VITE_POSTHOG_KEY ""
+          set_var SESSION_SIGNING_KEY "$(python3 -c "import base64, secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip('='))")"
+          set_var SECRET_KEY e2e-ci-secret-not-for-production
+          set_var IP_HASH_SECRET e2e-ci-ip-hash-secret-not-for-production
+          set_var MAIL_ENABLED true
+          set_var SMTP_URL smtp://mailpit:1025
+          set_var RATE_LIMITS_ENABLED false
+          docker network create edge || true
+          docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8085/api/healthz | grep -q '"ok"'; then
+              echo "accounts healthy after ${i} tries"; exit 0
+            fi
+            sleep 5
+          done
+          echo "accounts did not become healthy in 5 minutes"
+          docker compose --env-file .env -f deploy/docker-compose.yml ps
+          exit 1
+
       - name: Write .env for the local stack
         run: |
           cp .env.example .env
           set_var() { sed -i "s|^$1=.*|$1=$2|" .env; grep -q "^$1=" .env || echo "$1=$2" >> .env; }
           set_var PAYMENTS_URL http://localhost:8086
           set_var ACCOUNTS_URL http://localhost:8085
-          set_var ACCOUNTS_INTERNAL_URL http://localhost:8085
+          set_var ACCOUNTS_INTERNAL_URL http://accounts-api-1:5000
           set_var VITE_API_URL http://localhost:8086/api
           set_var VITE_APP_URL http://localhost:8086
           set_var VITE_ACCOUNTS_URL http://localhost:8085
@@ -46,7 +86,7 @@ jobs:
           grep -v -i 'secret\|key=' .env
 
       - name: Start the stack
-        run: docker network create edge && docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+        run: docker network create edge || true; docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
 
       - name: Wait for the API
         run: |
@@ -88,3 +128,8 @@ jobs:
       - name: Stack logs on failure
         if: failure()
         run: docker compose --env-file .env -f deploy/docker-compose.yml logs --tail 200
+
+      - name: accounts logs on failure
+        if: failure()
+        working-directory: .accounts
+        run: docker compose --env-file .env -f deploy/docker-compose.yml logs --tail 100
