@@ -15,7 +15,7 @@
 set -euo pipefail
 
 if [ ! -d /opt/payments/.git ]; then
-  git clone -q git@github.com:Devace-93/payments.git /opt/payments
+  git clone -q https://github.com/Devace-93/payments.git /opt/payments
   echo "✓ cloned /opt/payments"
 fi
 cd /opt/payments
