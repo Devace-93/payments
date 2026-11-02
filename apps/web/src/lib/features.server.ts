@@ -24,18 +24,26 @@ function apiBase(): string | null {
   return null;
 }
 
-export async function fetchServerFeatures(): Promise<Features> {
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.features;
+/**
+ * `cookie` is the viewer's `Cookie` header. The paying switches are evaluated
+ * per user (PostHog distinct_id = the accounts `sub`), so a signed-in viewer's
+ * session cookie is forwarded to the API and the result is never shared
+ * through the anonymous cache.
+ */
+export async function fetchServerFeatures(cookie?: string | null): Promise<Features> {
+  const signedIn = !!cookie && /(^|;\s*)3m4_session=/.test(cookie);
+  if (!signedIn && cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.features;
   const base = apiBase();
   if (!base) return { ...FEATURE_DEFAULTS };
   try {
     const res = await fetch(`${base}/features`, {
+      headers: signedIn ? { cookie: cookie as string } : undefined,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`features ${res.status}`);
     const data = (await res.json()) as { features?: Record<string, boolean> };
     const features = mergeFeatures(data.features);
-    cached = { features, at: Date.now() };
+    if (!signedIn) cached = { features, at: Date.now() };
     return features;
   } catch {
     return cached?.features ?? { ...FEATURE_DEFAULTS };

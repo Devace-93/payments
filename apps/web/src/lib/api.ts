@@ -150,3 +150,8 @@ export const api = {
     apiFetch<{ url: string }>("/portal", { method: "POST", body: return_to ? { return_to } : {} }),
   getEntitlements: (app: string) => apiFetch<Entitlements>(`/entitlements${q({ app })}`),
 };
+
+/** Resolved feature switches for the viewer (per-user flags need the cookie). */
+export function getFeatures(): Promise<Record<string, boolean>> {
+  return apiFetch<{ features: Record<string, boolean> }>("/features").then((d) => d.features || {});
+}

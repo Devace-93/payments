@@ -57,12 +57,12 @@ export default component$(() => {
         </header>
 
         {hasSession.value && (
-          <Link href="/me" class="card flex items-center justify-between gap-3 border-primary-200 bg-primary-50 p-5 hover:border-primary-400" data-testid="me-link">
+          <Link href="/me" class="card flex items-center justify-between gap-3 border-sky-200 bg-sky-50 p-5 hover:border-sky-400" data-testid="me-link">
             <div>
               <div class="font-semibold text-slate-900">{tr(i18n, "pay.yourSupport")}</div>
               <div class="text-sm text-slate-500">{tr(i18n, "pay.yourSupportHint")}</div>
             </div>
-            <span aria-hidden="true" class="text-primary-700">
+            <span aria-hidden="true" class="text-sky-700">
               →
             </span>
           </Link>

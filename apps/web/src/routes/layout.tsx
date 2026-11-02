@@ -4,7 +4,8 @@ import { initAnalytics } from "../lib/analytics";
 import { BuildingState } from "../components/building-state";
 import { I18nContext, initI18n, type I18nState } from "../i18n";
 import { DEFAULT_LANG } from "../i18n/langs";
-import { FeaturesContext, type Features } from "../lib/features";
+import { FeaturesContext, mergeFeatures, type Features } from "../lib/features";
+import * as api from "../lib/api";
 import { fetchServerFeatures } from "../lib/features.server";
 
 /**
@@ -19,7 +20,7 @@ import { fetchServerFeatures } from "../lib/features.server";
  * loader falls back to the registry defaults — feature resolution must never
  * be able to take the pages down by accident.
  */
-export const useServerFeatures = routeLoader$<Features>(() => fetchServerFeatures());
+export const useServerFeatures = routeLoader$<Features>(({ request }) => fetchServerFeatures(request.headers.get("cookie")));
 
 export default component$(() => {
   const serverFeatures = useServerFeatures();
@@ -42,6 +43,12 @@ export default component$(() => {
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(() => {
     initAnalytics();
+    // Re-resolve with the viewer's own cookie: the paying switches are per user,
+    // and the SSR answer may come from a cache or a cookie-less first render.
+    api
+      .getFeatures()
+      .then((f) => Object.assign(features, mergeFeatures(f)))
+      .catch(() => undefined);
   });
 
   return features["site-building"] ? <BuildingState /> : <Slot />;
