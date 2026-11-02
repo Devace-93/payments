@@ -34,7 +34,7 @@ def test_guest_donation_creates_row_and_fake_url(client, fake_stripe):
     params = call["params"]
     assert params["mode"] == "payment" and params["submit_type"] == "donate"
     assert params["customer_creation"] == "always" and "customer_email" not in params
-    assert params["line_items"][0]["price_data"] == {"currency": "usd", "unit_amount": 500, "product": "prod_fake_donation_usd"}
+    assert params["line_items"][0]["price_data"] == {"currency": "usd", "unit_amount": 500, "product": "prod_fake_donation_retro"}  # per-app "Support Retro" product
     assert params["client_reference_id"] == str(row_id)
     assert params["metadata"] == {"app": "retro", "kind": "donation", "checkout_id": str(row_id)}
     assert params["payment_intent_data"]["metadata"] == params["metadata"]
@@ -155,7 +155,7 @@ def test_get_checkout_status(client):
         assert got.status_code == 200
         body = got.get_json()
         assert body["id"] == row_id and body["status"] == "open" and body["kind"] == "donation"
-        assert body["app"] == {"slug": "retro", "name": "Retro"}
+        assert body["app"] == {"slug": "retro", "name": "Retro", "icon": "https://retro.3m4.net/icon-192.png"}
         assert body["amount"] == 500 and body["currency"] == "usd"
         assert body["return_to"] == "https://retro.3m4.net/x" and body["opener_origin"] == "https://retro.3m4.net"
         assert body["needs_claim"] is False and body["claimed"] is False and body["entitlements"] == []

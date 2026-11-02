@@ -162,8 +162,9 @@ def create_checkout():
         session.add(row)
         session.flush()
 
-        params = _session_params(row, app, product, customer, claims, raw_lang)
         stripe = client()
+        donation_product = _donation_product_id(session, stripe, app) if row.kind == "donation" else None
+        params = _session_params(row, app, product, customer, claims, raw_lang, donation_product=donation_product)
         try:
             created = as_dict(stripe.v1.checkout.sessions.create(params=params, options={"idempotency_key": str(row.id)}))
         except Exception as err:
@@ -176,7 +177,7 @@ def create_checkout():
 
 
 def _session_params(row: CheckoutSession, app: App, product: Product | None, customer: Customer | None,
-                    claims: dict | None, lang: str) -> dict:
+                    claims: dict | None, lang: str, *, donation_product: str | None = None) -> dict:
     metadata = {"app": app.slug, "kind": row.kind, "checkout_id": str(row.id)}
     if row.identity_id is not None:
         metadata["identity_id"] = str(row.identity_id)
@@ -202,7 +203,11 @@ def _session_params(row: CheckoutSession, app: App, product: Product | None, cus
         params["line_items"] = [
             {
                 "quantity": 1,
-                "price_data": {"currency": row.currency, "unit_amount": row.amount, "product": product.stripe_product_id},
+                "price_data": {
+                    "currency": row.currency,
+                    "unit_amount": row.amount,
+                    "product": donation_product or product.stripe_product_id,
+                },
             }
         ]
         params["payment_intent_data"] = {"metadata": metadata}
@@ -247,7 +252,7 @@ def get_checkout(raw_id: str):
             "status": row.status,
             "kind": row.kind,
             "price": product.key if product else None,
-            "app": {"slug": app.slug, "name": app.name},
+            "app": {"slug": app.slug, "name": app.name, "icon": app.icon},
             "amount": row.amount,
             "currency": row.currency,
             "return_to": row.return_to,
@@ -280,3 +285,24 @@ def _maybe_reconcile(session, row: CheckoutSession) -> None:
         row.status = "expired"
     elif cs.get("status") == "complete":
         handle_checkout_completed(session, stripe, cs)
+
+def _donation_product_id(session, stripe, app: App) -> str | None:
+    """The per-app "Support <app>" Stripe product (name + icon shown on
+    Checkout), created on the first donation and remembered on the app row.
+    Falls back to the shared donation product when creation fails."""
+    if app.stripe_donation_product_id:
+        return app.stripe_donation_product_id
+    if is_fake(stripe):
+        pid = f"prod_fake_donation_{app.slug}"
+    else:
+        params = {"name": f"Support {app.name}", "metadata": {"app": app.slug, "kind": "donation"}}
+        if catalog.stripe_image(app.icon):
+            params["images"] = [app.icon]
+        try:
+            pid = as_dict(stripe.v1.products.create(params=params))["id"]
+        except Exception as err:  # pragma: no cover - network
+            log.warning("could not create the donation product for %s: %s", app.slug, err)
+            return None
+    app.stripe_donation_product_id = pid
+    session.flush()
+    return pid

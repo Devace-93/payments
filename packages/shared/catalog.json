@@ -1,18 +1,100 @@
 {
-  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret.",
+  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret. `icon` is an absolute image URL shown on the portal pages and (PNG/JPEG only) on Stripe Checkout.",
   "apps": [
-    {"slug": "3m4", "name": "3m4", "origins": ["https://3m4.net", "https://*.3m4.net", "http://localhost:*", "http://127.0.0.1:*"], "products": []},
-    {"slug": "info", "name": "3m4 info", "origins": ["https://info.3m4.net", "https://3m4.net", "http://localhost:*"], "products": []},
-    {"slug": "mousetouch", "name": "MouseTouch", "origins": ["https://mouse.3m4.net", "http://localhost:*"], "products": []},
-    {"slug": "retro", "name": "Retro", "origins": ["https://retro.3m4.net", "http://localhost:*"],
-     "products": [
-       {"key": "pro_monthly", "kind": "subscription", "entitlement": "pro", "interval": "month", "lookup_key": "retro_pro_monthly", "label": "Pro", "amounts": {"usd": 500, "mxn": 9900, "eur": 500}},
-       {"key": "pro_annual", "kind": "subscription", "entitlement": "pro", "interval": "year", "lookup_key": "retro_pro_annual", "label": "Pro (annual)", "amounts": {"usd": 5000, "mxn": 99000, "eur": 5000}}
-     ]}
+    {
+      "slug": "3m4",
+      "name": "3m4",
+      "origins": [
+        "https://3m4.net",
+        "https://*.3m4.net",
+        "http://localhost:*",
+        "http://127.0.0.1:*"
+      ],
+      "products": [],
+      "icon": "https://3m4.net/icon-192.png"
+    },
+    {
+      "slug": "info",
+      "name": "3m4 info",
+      "origins": [
+        "https://info.3m4.net",
+        "https://3m4.net",
+        "http://localhost:*"
+      ],
+      "products": [],
+      "icon": "https://info.3m4.net/favicon.svg"
+    },
+    {
+      "slug": "mousetouch",
+      "name": "MouseTouch",
+      "origins": [
+        "https://mouse.3m4.net",
+        "http://localhost:*"
+      ],
+      "products": [],
+      "icon": null
+    },
+    {
+      "slug": "retro",
+      "name": "Retro",
+      "origins": [
+        "https://retro.3m4.net",
+        "http://localhost:*"
+      ],
+      "products": [
+        {
+          "key": "pro_monthly",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "month",
+          "lookup_key": "retro_pro_monthly",
+          "label": "Pro",
+          "amounts": {
+            "usd": 500,
+            "mxn": 9900,
+            "eur": 500
+          }
+        },
+        {
+          "key": "pro_annual",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "year",
+          "lookup_key": "retro_pro_annual",
+          "label": "Pro (annual)",
+          "amounts": {
+            "usd": 5000,
+            "mxn": 99000,
+            "eur": 5000
+          }
+        }
+      ],
+      "icon": "https://retro.3m4.net/icon-192.png"
+    }
   ],
   "donation": {
     "product_name": "Support 3m4",
-    "lookup_keys": {"usd": "donation_usd", "mxn": "donation_mxn", "eur": "donation_eur"},
-    "presets": {"usd": [300, 500, 1000], "eur": [300, 500, 1000], "mxn": [5000, 10000, 20000]}
+    "lookup_keys": {
+      "usd": "donation_usd",
+      "mxn": "donation_mxn",
+      "eur": "donation_eur"
+    },
+    "presets": {
+      "usd": [
+        300,
+        500,
+        1000
+      ],
+      "eur": [
+        300,
+        500,
+        1000
+      ],
+      "mxn": [
+        5000,
+        10000,
+        20000
+      ]
+    }
   }
 }

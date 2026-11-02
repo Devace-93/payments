@@ -21,7 +21,7 @@ def test_unknown_badge_is_grey_and_cacheable(client):
     resp = client.get("/badge/nobody.svg")
     assert resp.status_code == 200
     assert resp.mimetype == "image/svg+xml"
-    assert resp.headers["Cache-Control"] == "public, max-age=3600"
+    assert resp.headers["Cache-Control"] == "public, max-age=60, must-revalidate"
     assert resp.headers["Access-Control-Allow-Origin"] == "*"
     assert resp.headers["ETag"]
     svg = resp.get_data(as_text=True)

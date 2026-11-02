@@ -35,7 +35,7 @@ def _badge_response(session, *, handle: str | None, identity_id: str | None, fmt
     else:
         resp = Response(badges.svg(tier), mimetype="image/svg+xml")
     resp.headers["ETag"] = etag
-    resp.headers["Cache-Control"] = "public, max-age=3600"
+    resp.headers["Cache-Control"] = "public, max-age=60, must-revalidate"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["X-Content-Type-Options"] = "nosniff"
     return resp

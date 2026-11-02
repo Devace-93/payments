@@ -101,12 +101,12 @@ sha256 against `apps.service_key_hash`; the app may only act on its own slug);
 **stripe** (`Stripe-Signature`, `construct_event(request.get_data(), …)`).
 
 ### Public
-- `GET /api/catalog?app=retro` → `200 {app:{slug,name}, currencies:["usd","mxn","eur"], default_currency, donation:{presets:{usd:[…]}, min:{usd:200,…}, max:{…}}, products:[{key, kind, entitlement, interval, label, amounts:{usd:500,…}}], github_sponsors_url, fee_hint:bool}`. `Cache-Control: public, max-age=300`. Unknown app → `400 unknown_app`.
+- `GET /api/catalog?app=retro` → `200 {app:{slug,name,icon}, currencies:["usd","mxn","eur"], default_currency, donation:{presets:{usd:[…]}, min:{usd:200,…}, max:{…}}, products:[{key, kind, entitlement, interval, label, amounts:{usd:500,…}}], github_sponsors_url, fee_hint:bool}`. `Cache-Control: public, max-age=300`. Unknown app → `400 unknown_app`.
 - `GET /api/geo` → `{country:"MX"|null, currency:"mxn"}` from the client IP (X-Forwarded-For first hop). Never errors.
 - `GET /api/fees?amount=500&currency=usd&kind=donation` → `{amount, currency, fee, net_mxn, retention, min_amount}` (fees.py estimate; used for the fee hint).
 - `GET /api/public/supporters?app=retro&limit=50` → `{items:[{display_name, handle|null, tier:"supporter"|"pro"|"team", since:"2026-11", message|null}]}`, max-age 300. Only opted-in rows.
-- `GET /badge/<handle>.svg`, `GET /badge/<handle>.json`, `GET /badge/u/<identity_id>.svg|.json` → SVG (`image/svg+xml`, `Cache-Control: public, max-age=3600`, `ETag`, CORS `*`) or shields endpoint JSON `{"schemaVersion":1,"label":"3m4","message":"supporter|pro|team|not a supporter","color":"f59e0b|9f9f9f"}`. Always 200. Served by the API at host root.
-- `GET /api/checkout/<id>` (our uuid or `cs_…`) → `{id, status:"created"|"open"|"completed"|"expired", kind, app:{slug,name}, amount, currency, return_to, opener_origin, needs_claim:bool, claimed:bool, entitlements:[…]}`.
+- `GET /badge/<handle>.svg`, `GET /badge/<handle>.json`, `GET /badge/u/<identity_id>.svg|.json` → SVG (`image/svg+xml`, `Cache-Control: public, max-age=60, must-revalidate`, `ETag`, CORS `*`) or shields endpoint JSON `{"schemaVersion":1,"label":"3m4","message":"supporter|pro|team|not a supporter","color":"f59e0b|9f9f9f"}`. Always 200. Served by the API at host root.
+- `GET /api/checkout/<id>` (our uuid or `cs_…`) → `{id, status:"created"|"open"|"completed"|"expired", kind, app:{slug,name,icon}, amount, currency, return_to, opener_origin, needs_claim:bool, claimed:bool, entitlements:[…]}`.
 - `GET /healthz`, `GET /api/healthz`.
 
 ### Checkout (optional session; limit 10/minute per IP)

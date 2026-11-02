@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from sqlalchemy import select
 
@@ -49,6 +50,11 @@ def origin_matcher(app: App) -> OriginMatcher:
     return OriginMatcher(tuple(app.origins or ()))
 
 
+def stripe_image(url: str | None) -> bool:
+    """Stripe product images must be public PNG/JPEG URLs (SVG is not rendered)."""
+    return bool(url) and bool(re.search(r"\.(png|jpe?g)(\?.*)?$", url, re.IGNORECASE))
+
+
 def _upsert_app(session, entry: dict) -> App:
     app = session.scalar(select(App).where(App.slug == entry["slug"]))
     if app is None:
@@ -56,6 +62,7 @@ def _upsert_app(session, entry: dict) -> App:
         session.add(app)
     app.name = entry.get("name") or app.slug
     app.origins = list(entry.get("origins") or [])
+    app.icon = (entry.get("icon") or None)
     app.active = bool(entry.get("active", True))
     session.flush()
     return app
@@ -203,6 +210,7 @@ def create_prices(stripe) -> list[str]:
                 params={
                     "name": f"{entry['name']} {item.get('label') or item['key']}",
                     "metadata": {"app": entry["slug"], "key": item["key"], "entitlement": item.get("entitlement") or ""},
+                    **({"images": [entry["icon"]]} if stripe_image(entry.get("icon")) else {}),
                 }
             )
         )

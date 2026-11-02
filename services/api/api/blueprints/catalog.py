@@ -56,7 +56,7 @@ def get_catalog():
         ).all()
         presets = catalog.donation_presets()
         body = {
-            "app": {"slug": app.slug, "name": app.name},
+            "app": {"slug": app.slug, "name": app.name, "icon": app.icon},
             "currencies": list(config.currencies),
             "default_currency": config.fallback_currency(),
             "donation": {
