@@ -6,6 +6,7 @@
     python -m dbcore.cli sync-catalog         # catalog.json → apps/products (+ Stripe price ids); --lenient = never fail on missing prices (boot)
     python -m dbcore.cli create-prices        # create the missing Stripe products/prices
     python -m dbcore.cli app-key <slug> [webhook_url]   # new service key + webhook secret (printed once)
+    python -m dbcore.cli resync-subscription <sub_id>  # re-read one subscription from Stripe (missed webhook)
     python -m dbcore.cli seed-completed <cs_id>         # fake-mode: run the checkout.session.completed path
     python -m dbcore.cli prune                # old outbox rows, stale checkouts/events, dead claim codes
     python -m dbcore.cli geoip-update         # download GeoLite2-Country (MAXMIND_LICENSE_KEY)
@@ -135,6 +136,19 @@ def seed_completed(cs_id: str) -> None:
     print(f"✓ {cs_id}: {outcome}")
 
 
+def resync_subscription(sub_id: str) -> None:
+    """Re-read one subscription from Stripe and run the normal
+    ``customer.subscription.updated`` handling (after a missed webhook)."""
+    from .stripe_client import as_dict, client
+
+    stripe = client()
+    sub = as_dict(stripe.v1.subscriptions.retrieve(sub_id))
+    handlers = _stripe_events_module()
+    with session_scope() as session:
+        outcome = handlers.handle_event(session, stripe, "customer.subscription.updated", sub)
+    print(f"✓ {sub_id}: {outcome} (status={sub.get('status')}, cancel_at={sub.get('cancel_at')})")
+
+
 def prune(days: int = 7) -> None:
     """Delete finished outbox rows, abandoned/expired checkout sessions,
     processed Stripe events and dead claim codes older than ``days``
@@ -184,6 +198,8 @@ def main(argv: list[str]) -> int:
         create_all()
     elif cmd == "sync-catalog":
         sync_catalog(strict="--lenient" not in argv)
+    elif cmd == "resync-subscription":
+        resync_subscription(argv[2])
     elif cmd == "create-prices":
         create_prices()
     elif cmd == "app-key":
