@@ -3,14 +3,41 @@
   "apps": [
     {
       "slug": "3m4",
-      "name": "3m4",
+      "name": "3m4 shortener",
       "origins": [
         "https://3m4.net",
         "https://*.3m4.net",
         "http://localhost:*",
         "http://127.0.0.1:*"
       ],
-      "products": [],
+      "products": [
+        {
+          "key": "pro_monthly",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "month",
+          "lookup_key": "3m4_pro_monthly",
+          "label": "Pro",
+          "amounts": {
+            "usd": 1500,
+            "mxn": 29900,
+            "eur": 1500
+          }
+        },
+        {
+          "key": "pro_annual",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "year",
+          "lookup_key": "3m4_pro_annual",
+          "label": "Pro (annual)",
+          "amounts": {
+            "usd": 14400,
+            "mxn": 289000,
+            "eur": 14400
+          }
+        }
+      ],
       "icon": "https://payments.3m4.net/icons/3m4.png",
       "treat": "coffee"
     },
@@ -85,6 +112,82 @@
       ],
       "icon": "https://payments.3m4.net/icons/retro.png",
       "treat": "coffee"
+    },
+    {
+      "slug": "exp",
+      "name": "Exp",
+      "origins": [
+        "https://exp.3m4.net",
+        "http://localhost:*"
+      ],
+      "icon": "https://payments.3m4.net/icons/exp.png",
+      "treat": "coffee",
+      "products": [
+        {
+          "key": "pro_monthly",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "month",
+          "lookup_key": "exp_pro_monthly",
+          "label": "Pro",
+          "amounts": {
+            "usd": 1200,
+            "mxn": 23900,
+            "eur": 1200
+          }
+        },
+        {
+          "key": "pro_annual",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "year",
+          "lookup_key": "exp_pro_annual",
+          "label": "Pro (annual)",
+          "amounts": {
+            "usd": 11500,
+            "mxn": 229000,
+            "eur": 11500
+          }
+        }
+      ]
+    },
+    {
+      "slug": "metrics",
+      "name": "Metrics",
+      "origins": [
+        "https://metrics.3m4.net",
+        "http://localhost:*"
+      ],
+      "icon": "https://payments.3m4.net/icons/metrics.png",
+      "treat": "coffee",
+      "products": [
+        {
+          "key": "pro_monthly",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "month",
+          "lookup_key": "metrics_pro_monthly",
+          "label": "Pro",
+          "amounts": {
+            "usd": 1200,
+            "mxn": 23900,
+            "eur": 1200
+          }
+        },
+        {
+          "key": "pro_annual",
+          "kind": "subscription",
+          "entitlement": "pro",
+          "interval": "year",
+          "lookup_key": "metrics_pro_annual",
+          "label": "Pro (annual)",
+          "amounts": {
+            "usd": 11500,
+            "mxn": 229000,
+            "eur": 11500
+          }
+        }
+      ]
     }
   ],
   "donation": {

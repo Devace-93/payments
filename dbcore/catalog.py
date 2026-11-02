@@ -87,8 +87,9 @@ def _price_index(stripe, lookup_keys: list[str]) -> dict[str, dict]:
     found: dict[str, dict] = {}
     if not lookup_keys:
         return found
-    for i in range(0, len(lookup_keys), 50):
-        chunk = lookup_keys[i : i + 50]
+    # Stripe accepts at most 10 lookup keys per list call.
+    for i in range(0, len(lookup_keys), 10):
+        chunk = lookup_keys[i : i + 10]
         page = as_dict(stripe.v1.prices.list(params={"lookup_keys": chunk, "limit": 100, "active": True}))
         for price in page.get("data", []):
             key = price.get("lookup_key")
