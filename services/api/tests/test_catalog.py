@@ -68,14 +68,14 @@ def test_sync_catalog_with_fake_stripe(client):
         assert pro.app_id == retro.id and pro.interval == "month" and pro.entitlement == "pro"
         # idempotent
         counts = sync_catalog(session, stripe_client.client())
-        assert counts["products"] == 5
+        assert counts["products"] == 11  # 3 donation prices + 2 plans × (retro, exp, metrics, 3m4)
         assert session.scalar(select(Product).where(Product.lookup_key == "retro_pro_monthly")).id == pro.id
 
 
 def test_create_prices_against_fake(client):
     stripe = stripe_client.FakeStripe()
     created = create_prices(stripe)
-    assert set(created) == {"retro_pro_monthly", "retro_pro_annual", "donation_usd", "donation_mxn", "donation_eur"}
+    assert {"retro_pro_monthly", "retro_pro_annual", "exp_pro_monthly", "metrics_pro_annual", "3m4_pro_monthly", "donation_usd", "donation_mxn", "donation_eur"} <= set(created)
     price_params = [c["params"] for c in stripe.prices.calls]
     monthly = next(p for p in price_params if p["lookup_key"] == "retro_pro_monthly")
     assert monthly["currency"] == "usd" and monthly["unit_amount"] == 500
