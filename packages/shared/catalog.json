@@ -1,5 +1,5 @@
 {
-  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret. `icon` is an absolute image URL shown on the portal pages and (PNG/JPEG only) on Stripe Checkout.",
+  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret. `icon` is an absolute PNG URL (served by payments itself from apps/web/public/icons, generated from each app's favicon.svg) shown on the portal pages and on Stripe Checkout.",
   "apps": [
     {
       "slug": "3m4",
@@ -11,7 +11,7 @@
         "http://127.0.0.1:*"
       ],
       "products": [],
-      "icon": "https://3m4.net/icon-192.png"
+      "icon": "https://payments.3m4.net/icons/3m4.png"
     },
     {
       "slug": "info",
@@ -22,7 +22,7 @@
         "http://localhost:*"
       ],
       "products": [],
-      "icon": "https://info.3m4.net/favicon.svg"
+      "icon": "https://payments.3m4.net/icons/info.png"
     },
     {
       "slug": "mousetouch",
@@ -32,7 +32,7 @@
         "http://localhost:*"
       ],
       "products": [],
-      "icon": null
+      "icon": "https://payments.3m4.net/icons/mousetouch.png"
     },
     {
       "slug": "retro",
@@ -69,7 +69,7 @@
           }
         }
       ],
-      "icon": "https://retro.3m4.net/icon-192.png"
+      "icon": "https://payments.3m4.net/icons/retro.png"
     }
   ],
   "donation": {
