@@ -25,6 +25,16 @@
       "icon": "https://payments.3m4.net/icons/info.png"
     },
     {
+      "slug": "kinegram",
+      "name": "Kinegram",
+      "origins": [
+        "https://kinegram.3m4.net",
+        "http://localhost:*"
+      ],
+      "icon": "https://payments.3m4.net/icons/kinegram.png",
+      "products": []
+    },
+    {
       "slug": "mousetouch",
       "name": "MouseTouch",
       "origins": [
