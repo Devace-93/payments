@@ -1,5 +1,6 @@
 # Build context = repo root for every service. Keep images slim and correct.
 .git
+.accounts/                  # accounts checkout used by the e2e workflow
 .gitignore
 *.md
 !packages/shared/**          # keep shared JSON (imported at runtime)

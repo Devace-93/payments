@@ -1,4 +1,5 @@
-"""Public routes: the supporters list (``/api/public/supporters``) and the
+"""Public routes: the supporters list (``/api/public/supporters``, Stripe donors
++ subscribers of one app or ``app=all``, plus public GitHub sponsors) and the
 badges served at the host root (``/badge/<handle>.svg|.json``,
 ``/badge/u/<identity_id>.svg|.json``). Always 200, CORS ``*``."""
 from __future__ import annotations
@@ -12,7 +13,7 @@ from dbcore import badges
 from dbcore.db import session_scope
 from dbcore.entitlements import is_entitled
 from dbcore.feature_flags import is_enabled
-from dbcore.models import App, Customer, Payment, Subscription
+from dbcore.models import App, Customer, GithubSponsor, Payment, Subscription
 
 from ..errors import ApiError
 from ..extensions import limiter
@@ -73,6 +74,10 @@ def _since(dt) -> str | None:
     return dt.strftime("%Y-%m") if dt else None
 
 
+def _entry(name: str, handle: str | None, tier: str, since: str | None) -> dict:
+    return {"display_name": name, "handle": handle, "tier": tier, "since": since, "message": None, "source": "stripe", "url": None, "avatar_url": None}
+
+
 @bp.get("/api/public/supporters")
 def supporters():
     slug = (request.args.get("app") or "").strip().lower()
@@ -81,16 +86,20 @@ def supporters():
     except ValueError:
         limit = 50
     with session_scope() as session:
-        app = session.scalar(select(App).where(App.slug == slug)) if slug else None
-        if app is None:
-            raise ApiError(400, "unknown_app", "Unknown app.")
+        if slug == "all":
+            app_ids = list(session.scalars(select(App.id)).all())
+        else:
+            app = session.scalar(select(App).where(App.slug == slug)) if slug else None
+            if app is None:
+                raise ApiError(400, "unknown_app", "Unknown app.")
+            app_ids = [app.id]
         items: dict[str, dict] = {}
         payments = session.scalars(
             select(Payment)
-            .where(Payment.app_id == app.id, Payment.public.is_(True), Payment.status.in_(("paid", "partially_refunded")))
+            .where(Payment.app_id.in_(app_ids), Payment.public.is_(True), Payment.status.in_(("paid", "partially_refunded")))
             .order_by(Payment.created_at)
         ).all()
-        subs = session.scalars(select(Subscription).where(Subscription.app_id == app.id)).all()
+        subs = session.scalars(select(Subscription).where(Subscription.app_id.in_(app_ids)).order_by(Subscription.created_at)).all()
         identity_ids = {p.identity_id for p in payments if p.identity_id} | {s.identity_id for s in subs}
         customers = {
             c.identity_id: c
@@ -109,7 +118,7 @@ def supporters():
                 name = payment.display_name or "anonymous"
                 handle = None
             entry = items.setdefault(
-                key, {"display_name": name, "handle": handle, "tier": "supporter", "since": _since(payment.created_at), "message": None}
+                key, _entry(name, handle, "supporter", _since(payment.created_at))
             )
             if payment.message:
                 entry["message"] = payment.message
@@ -122,17 +131,21 @@ def supporters():
             key = str(sub.identity_id)
             entry = items.setdefault(
                 key,
-                {
-                    "display_name": customer.display_name or customer.name or customer.handle or "anonymous",
-                    "handle": customer.handle,
-                    "tier": "supporter",
-                    "since": _since(sub.created_at),
-                    "message": None,
-                },
+                _entry(customer.display_name or customer.name or customer.handle or "anonymous", customer.handle, "supporter", _since(sub.created_at)),
             )
             tier = ENTITLED_TIER.get((sub.entitlement or "").lower(), "supporter")
             if badges.TIERS.index(tier) > badges.TIERS.index(entry["tier"]):
                 entry["tier"] = tier
+        # GitHub sponsors are not tied to an app: every list carries the public, active ones.
+        gh = session.scalars(
+            select(GithubSponsor)
+            .where(GithubSponsor.status == "active", GithubSponsor.privacy_level == "public")
+            .order_by(GithubSponsor.started_at)
+        ).all()
+        for sponsor in gh:
+            entry = _entry(sponsor.name or sponsor.login, sponsor.login, "supporter", _since(sponsor.started_at))
+            entry.update({"source": "github", "url": sponsor.html_url, "avatar_url": sponsor.avatar_url})
+            items.setdefault(f"github:{sponsor.login}", entry)
         rows = sorted(items.values(), key=lambda e: (-badges.TIERS.index(e["tier"]), e["since"] or ""))[:limit]
     resp = jsonify({"items": rows})
     resp.headers["Cache-Control"] = "public, max-age=300"

@@ -5,6 +5,13 @@
  *           data-amount="500" data-currency="usd" data-label="Buy me a coffee" data-mount="#support" defer></script>
  *   <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="subscribe"
  *           data-price="pro_monthly" data-return-to="https://retro.3m4.net/dashboard/billing" defer></script>
+ *   <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="supporters"
+ *           data-limit="24" data-label="Thanks to our supporters" data-mount="#supporters" defer></script>
+ *
+ * `data-kind="supporters"` renders the public supporters list of the app
+ * (`GET /api/public/supporters?app=`: opted-in donors / subscribers plus
+ * GitHub sponsors) as a row of chips; nothing is rendered while the list is
+ * empty. It is not gated by the paying switches (public data).
  *
  * One button per tag (`data-mount` selector, else inserted after the script).
  * Click → popup `window.open(url, "m4pay", "popup,width=480,height=780")`;
@@ -40,9 +47,21 @@ interface OpenOpts {
   lang?: string;
 }
 
+interface Supporter {
+  display_name: string;
+  handle: string | null;
+  tier: "supporter" | "pro" | "team";
+  since: string | null;
+  message: string | null;
+  source?: "stripe" | "github";
+  url?: string | null;
+  avatar_url?: string | null;
+}
+
 interface M4Pay {
   open(opts: OpenOpts): Window | null;
   entitlements(app: string): Promise<Entitlements | null>;
+  supporters(app: string, limit?: number): Promise<Supporter[]>;
   origin: string;
 }
 
@@ -53,8 +72,8 @@ declare global {
 }
 
 const STRINGS = {
-  en: { donate: "Buy me a coffee", subscribe: "Subscribe", opening: "Opening…" },
-  es: { donate: "Invítame un café", subscribe: "Suscribirse", opening: "Abriendo…" },
+  en: { donate: "Buy me a coffee", subscribe: "Subscribe", opening: "Opening…", supporters: "Thanks to our supporters" },
+  es: { donate: "Invítame un café", subscribe: "Suscribirse", opening: "Abriendo…", supporters: "Gracias a quienes nos apoyan" },
 };
 
 const CSS = `
@@ -62,6 +81,15 @@ const CSS = `
 .m4p:hover{filter:brightness(1.06)}.m4p:focus-visible{outline:2px solid var(--m4p-a);outline-offset:2px}.m4p[disabled]{opacity:.7;cursor:progress}
 .m4p[data-dark]{box-shadow:0 0 0 1px rgba(255,255,255,.08)}
 .m4p svg{width:16px;height:16px;flex:none}
+.m4p-sup{--m4p-a:var(--accent,#f59e0b);font:500 13px/1.3 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:inherit}
+.m4p-sup-title{display:block;margin:0 0 8px;font-weight:600;opacity:.8}
+.m4p-sup-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.m4p-sup-list a,.m4p-sup-list span.m4p-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:999px;background:rgba(127,127,127,.12);color:inherit;text-decoration:none;max-width:100%}
+.m4p-sup-list a:hover{background:rgba(127,127,127,.22)}
+.m4p-sup-list img,.m4p-sup-list i{width:22px;height:22px;border-radius:50%;flex:none;object-fit:cover}
+.m4p-sup-list i{display:inline-grid;place-items:center;font:700 11px/1 system-ui,sans-serif;font-style:normal;background:var(--m4p-a);color:#1c1917}
+.m4p-sup-list b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m4p-sup-list [data-tier="pro"] i,.m4p-sup-list [data-tier="team"] i{box-shadow:0 0 0 2px var(--m4p-a)}
 `;
 
 (() => {
@@ -211,9 +239,21 @@ const CSS = `
         return w;
       };
 
+      const supporters = async (app: string, limit = 24): Promise<Supporter[]> => {
+        try {
+          const res = await fetch(`${origin}/api/public/supporters?app=${encodeURIComponent(app)}&limit=${Math.max(1, Math.min(limit, 200))}`);
+          if (!res.ok) return [];
+          const d = (await res.json()) as { items?: Supporter[] };
+          return Array.isArray(d.items) ? d.items : [];
+        } catch {
+          return [];
+        }
+      };
+
       const api: M4Pay & { _t: typeof STRINGS.en; _dark: () => boolean } = {
         open,
         entitlements,
+        supporters,
         origin,
         get _t() {
           return STRINGS[lang()];
@@ -232,6 +272,84 @@ const CSS = `
     const d = script.dataset;
     const app = d.app || "";
     if (!app) return;
+
+    const place = (el: HTMLElement) => {
+      try {
+        const sel = d.mount;
+        const host = sel ? document.querySelector(sel) : null;
+        if (host) host.appendChild(el);
+        else if (script.parentNode) script.parentNode.insertBefore(el, script.nextSibling);
+        else document.body.appendChild(el);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    if (d.kind === "supporters") {
+      // ---- supporters list (public, not gated) ----------------------------
+      const box = document.createElement("div");
+      box.className = "m4p-sup";
+      box.setAttribute("data-m4pay", "supporters");
+      const title = document.createElement("span");
+      title.className = "m4p-sup-title";
+      const list = document.createElement("ul");
+      list.className = "m4p-sup-list";
+      box.appendChild(title);
+      box.appendChild(list);
+      const renderTitle = () => {
+        title.textContent = d.label || shared._t.supporters;
+        if (shared._dark()) box.setAttribute("data-dark", "");
+        else box.removeAttribute("data-dark");
+      };
+      const initial = (s: Supporter) => (s.display_name || s.handle || "?").trim().charAt(0).toUpperCase() || "?";
+      const fill = (items: Supporter[]) => {
+        list.textContent = "";
+        for (const s of items) {
+          const li = document.createElement("li");
+          li.setAttribute("data-tier", s.tier || "supporter");
+          const chip = s.url ? document.createElement("a") : document.createElement("span");
+          if (s.url && chip instanceof HTMLAnchorElement) {
+            chip.href = s.url;
+            chip.target = "_blank";
+            chip.rel = "noopener nofollow";
+          } else chip.className = "m4p-chip";
+          if (s.avatar_url) {
+            const img = document.createElement("img");
+            img.src = s.avatar_url;
+            img.alt = "";
+            img.loading = "lazy";
+            img.referrerPolicy = "no-referrer";
+            chip.appendChild(img);
+          } else {
+            const i = document.createElement("i");
+            i.textContent = initial(s);
+            chip.appendChild(i);
+          }
+          const b = document.createElement("b");
+          b.textContent = s.display_name || (s.handle ? `@${s.handle}` : "anonymous");
+          chip.appendChild(b);
+          if (s.message) chip.title = s.message;
+          li.appendChild(chip);
+          list.appendChild(li);
+        }
+      };
+      const mountList = () => {
+        shared.supporters(app, Number(d.limit) || 24).then((items) => {
+          if (!items.length) return; // nothing to show: stay invisible
+          renderTitle();
+          fill(items);
+          place(box);
+        });
+      };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountList);
+      else mountList();
+      window.addEventListener("storage", (e) => {
+        if (e.key === "3m4.lang" || e.key === "3m4.theme") renderTitle();
+      });
+      new MutationObserver(renderTitle).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "lang"] });
+      return;
+    }
+
     const kind: "donate" | "subscribe" = d.kind === "subscribe" ? "subscribe" : "donate";
     const opts: OpenOpts = { app, kind, amount: d.amount, currency: d.currency, price: d.price, returnTo: d.returnTo, lang: d.lang };
 
@@ -260,17 +378,7 @@ const CSS = `
       }
     };
 
-    const mount = () => {
-      try {
-        const sel = d.mount;
-        const host = sel ? document.querySelector(sel) : null;
-        if (host) host.appendChild(btn);
-        else if (script.parentNode) script.parentNode.insertBefore(btn, script.nextSibling);
-        else document.body.appendChild(btn);
-      } catch {
-        /* ignore */
-      }
-    };
+    const mount = () => place(btn);
     const mountWhenAllowed = () => {
       shared._allowed(kind).then((ok) => {
         if (ok) mount();
