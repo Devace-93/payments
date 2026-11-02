@@ -188,6 +188,28 @@
           }
         }
       ]
+    },
+    {
+      "slug": "bubbles",
+      "name": "Bubbles",
+      "origins": [
+        "https://bubbles.3m4.net",
+        "http://localhost:*"
+      ],
+      "icon": "https://payments.3m4.net/icons/bubbles.png",
+      "treat": "coffee",
+      "products": []
+    },
+    {
+      "slug": "smartdocs",
+      "name": "Smart Docs",
+      "origins": [
+        "https://smart-docs.3m4.net",
+        "http://localhost:*"
+      ],
+      "icon": "https://payments.3m4.net/icons/smartdocs.png",
+      "treat": "coffee",
+      "products": []
     }
   ],
   "donation": {
