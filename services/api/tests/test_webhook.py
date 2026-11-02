@@ -342,3 +342,20 @@ def test_invoice_refund_matches_by_invoice_id(client):
     with session_scope() as session:
         pay = session.scalar(select(Payment).where(Payment.stripe_invoice_id == "in_r"))
         assert pay.status == "refunded" and pay.amount_refunded == 500 and pay.stripe_charge_id == "ch_r" and pay.stripe_payment_intent_id == "pi_r"
+
+
+def test_portal_cancel_at_marks_cancel_at_period_end(client):
+    """The Customer Portal cancels with ``cancel_at`` set and
+    ``cancel_at_period_end`` false; we treat it as cancel-at-period-end."""
+    set_webhook("retro")
+    identity = session_cookie(client, make_identity())
+    assert client.get("/api/me").status_code == 200  # mirrors the customer (email) from the claims
+    now = int(time.time())
+    sub = sub_object("sub_ca", identity["sub"], now=now)
+    assert post_event(client, "customer.subscription.created", sub, created=now).status_code == 200
+    sub2 = dict(sub, cancel_at=now + 20 * 86400, canceled_at=now, cancel_at_period_end=False)
+    assert post_event(client, "customer.subscription.updated", sub2, created=now + 1).status_code == 200
+    ent = client.get("/api/entitlements?app=retro").get_json()
+    assert ent["entitlements"] == ["pro"]
+    assert ent["subscription"]["status"] == "active" and ent["subscription"]["cancel_at_period_end"] is True
+    assert [m["template"] for m in outbox_rows(kind="email")][-1] == "subscription_cancelled"

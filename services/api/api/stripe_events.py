@@ -307,8 +307,13 @@ def upsert_subscription(session, sub: dict, *, app: App | None = None, product: 
     row.status = force_status or sub.get("status") or row.status
     row.current_period_start = start or row.current_period_start
     row.current_period_end = end or row.current_period_end
-    row.cancel_at_period_end = bool(sub.get("cancel_at_period_end"))
+    # The Customer Portal schedules cancellations with ``cancel_at`` (period
+    # end) and leaves ``cancel_at_period_end`` false; both mean "ends at the
+    # period end, still entitled until then".
+    row.cancel_at_period_end = bool(sub.get("cancel_at_period_end")) or bool(sub.get("cancel_at"))
     row.canceled_at = _ts(sub.get("canceled_at"))
+    if sub.get("cancel_at") and not end:
+        row.current_period_end = _ts(sub.get("cancel_at"))
     if event_created is not None:
         row.stripe_updated = max(row.stripe_updated or 0, int(event_created))
     row.raw = {
