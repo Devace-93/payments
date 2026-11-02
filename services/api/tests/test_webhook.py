@@ -325,3 +325,20 @@ def test_invoice_paid_before_subscription_created(client, monkeypatch):
     assert post_event(client, "customer.subscription.created", sub, created=now + 1).status_code == 200
     with session_scope() as session:
         assert session.scalar(select(Subscription).where(Subscription.stripe_subscription_id == "sub_first").with_only_columns(Subscription.id)) is not None
+
+
+def test_invoice_refund_matches_by_invoice_id(client):
+    """A refund of a subscription invoice carries the invoice id but no payment
+    intent we stored (current API versions drop invoice.payment_intent)."""
+    set_webhook("retro")
+    identity = session_cookie(client, make_identity())
+    now = int(time.time())
+    assert post_event(client, "customer.subscription.created", sub_object("sub_r", identity["sub"], now=now), created=now).status_code == 200
+    inv = {"id": "in_r", "object": "invoice", "amount_paid": 500, "currency": "usd", "customer_email": identity["email"],
+           "parent": {"subscription_details": {"subscription": "sub_r"}}, "billing_reason": "subscription_create"}
+    assert post_event(client, "invoice.paid", inv, created=now + 1).get_json() == {"status": "invoice"}
+    charge = {"id": "ch_r", "object": "charge", "invoice": "in_r", "payment_intent": "pi_r", "amount": 500, "amount_refunded": 500, "refunded": True}
+    assert post_event(client, "charge.refunded", charge, created=now + 2).get_json() == {"status": "refunded"}
+    with session_scope() as session:
+        pay = session.scalar(select(Payment).where(Payment.stripe_invoice_id == "in_r"))
+        assert pay.status == "refunded" and pay.amount_refunded == 500 and pay.stripe_charge_id == "ch_r" and pay.stripe_payment_intent_id == "pi_r"

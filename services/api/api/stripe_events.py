@@ -440,12 +440,18 @@ def handle_invoice_failed(session, invoice: dict) -> str:
 # refunds / disputes
 # --------------------------------------------------------------------------- #
 def _payment_for_charge(session, charge: dict) -> Payment | None:
+    """Resolve the payment row a charge belongs to: by payment intent, by
+    charge id, or (subscription invoices, whose payment intent is not on the
+    invoice object in current API versions) by the charge's invoice id."""
     pi_id = _id(charge.get("payment_intent"))
     payment = None
     if pi_id:
         payment = session.scalar(select(Payment).where(Payment.stripe_payment_intent_id == pi_id))
     if payment is None and charge.get("id"):
         payment = session.scalar(select(Payment).where(Payment.stripe_charge_id == charge.get("id")))
+    invoice_id = _id(charge.get("invoice"))
+    if payment is None and invoice_id:
+        payment = session.scalar(select(Payment).where(Payment.stripe_invoice_id == invoice_id))
     return payment
 
 
@@ -468,6 +474,8 @@ def handle_charge_refunded(session, charge: dict) -> str:
     _mark_refunded(session, payment, "refunded" if full else "partially_refunded", refunded)
     if charge.get("id") and not payment.stripe_charge_id:
         payment.stripe_charge_id = charge.get("id")
+    if _id(charge.get("payment_intent")) and not payment.stripe_payment_intent_id:
+        payment.stripe_payment_intent_id = _id(charge.get("payment_intent"))
     return "refunded"
 
 
