@@ -33,6 +33,7 @@ if [ ! -f .env ]; then
   set_var POSTGRES_PASSWORD "$PG_PASS"
   set_var DATABASE_URL "postgresql+psycopg://payments:$PG_PASS@postgres:5432/payments"
   set_var SECRET_KEY "$(secret 48)"
+  set_var FEATURE_FLAG_OVERRIDES ""   # production never pins the paying switches on
   set_var PAYMENTS_URL https://payments.3m4.net
   set_var ACCOUNTS_URL https://accounts.3m4.net
   set_var ACCOUNTS_INTERNAL_URL http://accounts-api-1:5000
