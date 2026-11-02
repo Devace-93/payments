@@ -11,6 +11,7 @@
  * Throws `ApiRequestError` (carrying the parsed `error` body + HTTP status) so
  * callers can branch on the stable error codes.
  */
+import { currentLang } from "../i18n/langs";
 import type {
   ApiError,
   Catalog,
@@ -103,21 +104,31 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   return (await res.json()) as T;
 }
 
-/** Hosted login on accounts, coming back to the current page (§10 login gate). */
-export function loginUrl(returnTo?: string): string {
+/**
+ * Link to one of accounts' hosted pages, coming back to `returnTo` (default:
+ * the current page) and carrying the viewer's locale as `&lang=` so the
+ * language follows them across 3m4 sites (accounts accepts `?lang`).
+ * `lang` defaults to the persisted `3m4.lang` / the page's locale; omitted
+ * when neither is known (SSR).
+ */
+function accountsUrl(page: "login" | "signup" | "logout", returnTo?: string, lang?: string): string {
   const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
-  return `${ACCOUNTS_URL}/login?return_to=${encodeURIComponent(back)}`;
+  const l = lang ?? currentLang();
+  return `${ACCOUNTS_URL}/${page}?return_to=${encodeURIComponent(back)}${l ? `&lang=${encodeURIComponent(l)}` : ""}`;
 }
 
-export function signupUrl(returnTo?: string): string {
-  const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
-  return `${ACCOUNTS_URL}/signup?return_to=${encodeURIComponent(back)}`;
+/** Hosted login on accounts, coming back to the current page (§10 login gate). */
+export function loginUrl(returnTo?: string, lang?: string): string {
+  return accountsUrl("login", returnTo, lang);
+}
+
+export function signupUrl(returnTo?: string, lang?: string): string {
+  return accountsUrl("signup", returnTo, lang);
 }
 
 /** Hosted logout on accounts (clears the `.3m4.net` cookie), coming back to the current page. */
-export function logoutUrl(returnTo?: string): string {
-  const back = returnTo ?? (typeof location !== "undefined" ? location.href : "/");
-  return `${ACCOUNTS_URL}/logout?return_to=${encodeURIComponent(back)}`;
+export function logoutUrl(returnTo?: string, lang?: string): string {
+  return accountsUrl("logout", returnTo, lang);
 }
 
 const q = (params: Record<string, string | number | undefined>): string => {

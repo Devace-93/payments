@@ -1,5 +1,5 @@
 {
-  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret. `icon` is an absolute PNG URL (served by payments itself from apps/web/public/icons, generated from each app's favicon.svg) shown on the portal pages and on Stripe Checkout.",
+  "_comment": "Registry of apps and products for payments.3m4.net. Mirrored into the DB by `python -m dbcore.cli sync-catalog`; prices are resolved in Stripe by lookup_key (`cli create-prices` creates missing ones). Amounts are minor units. Adding an app = one entry here + `cli app-key <slug>` for its service key / webhook secret. `icon` is an absolute PNG URL (served by payments itself from apps/web/public/icons, generated from each app's favicon.svg) shown on the portal pages and on Stripe Checkout. `treat` (coffee|beer) picks the portal's wording for donations (\"Buy me a coffee\" vs \"Buy me a beer\").",
   "apps": [
     {
       "slug": "3m4",
@@ -11,7 +11,8 @@
         "http://127.0.0.1:*"
       ],
       "products": [],
-      "icon": "https://payments.3m4.net/icons/3m4.png"
+      "icon": "https://payments.3m4.net/icons/3m4.png",
+      "treat": "coffee"
     },
     {
       "slug": "info",
@@ -22,7 +23,8 @@
         "http://localhost:*"
       ],
       "products": [],
-      "icon": "https://payments.3m4.net/icons/info.png"
+      "icon": "https://payments.3m4.net/icons/info.png",
+      "treat": "beer"
     },
     {
       "slug": "kinegram",
@@ -32,7 +34,8 @@
         "http://localhost:*"
       ],
       "icon": "https://payments.3m4.net/icons/kinegram.png",
-      "products": []
+      "products": [],
+      "treat": "coffee"
     },
     {
       "slug": "mousetouch",
@@ -42,7 +45,8 @@
         "http://localhost:*"
       ],
       "products": [],
-      "icon": "https://payments.3m4.net/icons/mousetouch.png"
+      "icon": "https://payments.3m4.net/icons/mousetouch.png",
+      "treat": "beer"
     },
     {
       "slug": "retro",
@@ -79,7 +83,8 @@
           }
         }
       ],
-      "icon": "https://payments.3m4.net/icons/retro.png"
+      "icon": "https://payments.3m4.net/icons/retro.png",
+      "treat": "coffee"
     }
   ],
   "donation": {

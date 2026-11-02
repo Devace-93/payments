@@ -84,6 +84,17 @@ const CSS = `
         l = (l || document.documentElement.lang || navigator.language || "en").slice(0, 2);
         return l === "es" ? "es" : "en";
       };
+      // The viewer's full locale (e.g. es-MX) so the portal opens in the same
+      // language the host page shows; `lang()` above is only for our two strings.
+      const fullLang = (): string => {
+        let l = "";
+        try {
+          l = localStorage.getItem("3m4.lang") || "";
+        } catch {
+          /* storage unavailable */
+        }
+        return l || document.documentElement.lang || navigator.language || "en";
+      };
       const dark = (): boolean => {
         let th = document.documentElement.dataset.theme || "";
         if (!th) {
@@ -174,7 +185,7 @@ const CSS = `
           if (o.price) p.set("price", o.price);
         } else {
           if (o.amount) p.set("amount", String(o.amount));
-          p.set("lang", o.lang || lang());
+          p.set("lang", o.lang || fullLang());
         }
         return `${origin}/${o.kind === "subscribe" ? "subscribe" : "donate"}?${p}`;
       };

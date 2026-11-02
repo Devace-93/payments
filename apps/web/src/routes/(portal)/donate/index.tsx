@@ -5,7 +5,7 @@ import { formatAmount, fromMinor, resolveCurrency, toMinor } from "../../../lib/
 import { FeaturesContext } from "../../../lib/features";
 import { readOrigin, readReturnToOrNone } from "../../../lib/returnTo";
 import { capture } from "../../../lib/analytics";
-import type { Catalog, Me } from "../../../lib/types";
+import { treatOf, type Catalog, type Me } from "../../../lib/types";
 import { CurrencySelect } from "../../../components/currency-select";
 import { AppIcon } from "../../../components/app-icon";
 import { tr, trError, useI18n } from "../../../i18n";
@@ -151,15 +151,18 @@ export default component$(() => {
   const cur = currency.value;
   const presets = cat?.donation.presets[cur] ?? [];
   const name = cat?.app.name ?? app;
+  const treat = treatOf(cat?.app);
   const disabled = !cat || form.busy || !features.donations;
 
   return (
-    <div class="card p-8">
+    <div class="card p-8" data-treat={treat}>
       <div class="flex items-center gap-3">
         {cat && <AppIcon name={name} icon={cat.app.icon} />}
-        <h1 class="text-2xl font-bold text-slate-900">{tr(i18n, "pay.donateTitle", { app: name })}</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{tr(i18n, `pay.treat.${treat}.title`)}</h1>
       </div>
-      <p class="mt-1 text-sm text-slate-500">{tr(i18n, "pay.donateSubtitle")}</p>
+      <p class="mt-1 text-sm text-slate-500" data-testid="donate-lede">
+        {tr(i18n, `pay.treat.${treat}.lede`, { app: name })}
+      </p>
       {me.value && (
         <p class="mt-2 text-sm text-primary-700" data-testid="donating-as">
           {tr(i18n, "pay.donatingAs", { handle: me.value.identity.handle })}

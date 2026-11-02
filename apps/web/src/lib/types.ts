@@ -5,11 +5,21 @@ export type Currency = string;
 
 export type CheckoutKind = "donation" | "subscription";
 
+/** What a donation "buys" Enrique — drives the wording on the hosted pages. */
+export type Treat = "coffee" | "beer";
+
 export interface AppRef {
   slug: string;
   name: string;
   /** Absolute image URL of the app's icon, `null` when the app has none. */
   icon?: string | null;
+  /** Per-app treat wording; missing / unknown → "coffee". */
+  treat?: Treat | null;
+}
+
+/** The app's treat, defaulting to coffee when the API does not say (older API / unknown value). */
+export function treatOf(app?: Pick<AppRef, "treat"> | null): Treat {
+  return app?.treat === "beer" ? "beer" : "coffee";
 }
 
 export interface Product {

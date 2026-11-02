@@ -3,7 +3,7 @@ import { Link, routeLoader$, useLocation, type DocumentHead } from "@builder.io/
 import { api, ApiRequestError } from "../../lib/api";
 import { formatAmount, resolveCurrency } from "../../lib/currency";
 import { FeaturesContext } from "../../lib/features";
-import type { Catalog } from "../../lib/types";
+import { treatOf, type Catalog } from "../../lib/types";
 import { CurrencySelect } from "../../components/currency-select";
 import { AppIcon } from "../../components/app-icon";
 import { tr, trError, useI18n } from "../../i18n";
@@ -114,6 +114,7 @@ export default component$(() => {
   const cur = currency.value;
   const presets = cat?.donation.presets[cur] ?? [];
   const name = cat?.app.name ?? KNOWN_APPS.find((a) => a.slug === app)?.name ?? app;
+  const treat = treatOf(cat?.app);
   const qs = (extra: Record<string, string>) => {
     const p = new URLSearchParams({ app, currency: cur, ...extra });
     for (const k of ["return_to", "origin"]) {
@@ -153,9 +154,9 @@ export default component$(() => {
       {state.loading && <p class="text-sm text-slate-400">{tr(i18n, "common.loading")}</p>}
 
       {cat && features.donations && (
-        <section class="card p-6" data-testid="catalog-donate">
-          <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, "pay.catalogDonate")}</h2>
-          <p class="mt-1 text-sm text-slate-500">{tr(i18n, "pay.catalogDonateBody", { app: name })}</p>
+        <section class="card p-6" data-testid="catalog-donate" data-treat={treat}>
+          <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, `pay.treat.${treat}.title`)}</h2>
+          <p class="mt-1 text-sm text-slate-500">{tr(i18n, `pay.treat.${treat}.lede`, { app: name })}</p>
           <div class="mt-4 flex flex-wrap gap-2">
             {presets.map((amt) => (
               <Link key={amt} href={`/donate${qs({ amount: String(amt) })}`} class="btn-secondary" data-testid="preset">

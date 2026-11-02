@@ -3,8 +3,10 @@ import type { PartialCatalog } from "./en";
 /** Español (Argentina) — overrides vs the neutral Latin-American base (voseo). */
 const esAR: PartialCatalog = {
   "pay.pickApp": "Elegí una app",
-  "pay.catalogDonateBody": "Un café de una sola vez para {app}. No necesitás cuenta.",
-  "pay.donateSubtitle": "Invitale un café a Enrique. Se paga con tarjeta a través de Stripe; no necesitás cuenta.",
+  "pay.treat.coffee.title": "Invitale un café a Enrique ☕",
+  "pay.treat.coffee.lede": "Un café de una sola vez para {app}. Se paga con tarjeta a través de Stripe; no necesitás cuenta.",
+  "pay.treat.beer.title": "Invitale una cerveza a Enrique 🍺",
+  "pay.treat.beer.lede": "Una cerveza de una sola vez para {app}. Se paga con tarjeta a través de Stripe; no necesitás cuenta.",
   "pay.publicToggle": "Mostrar mi nombre públicamente como patrocinador",
   "pay.claimExplainer": "¿Pagás como invitado? Tu recibo incluye un código para vincular la donación a una cuenta de 3m4 más adelante.",
   "pay.subscribeTitle": "Suscribite a {app}",

@@ -63,6 +63,7 @@ def _upsert_app(session, entry: dict) -> App:
     app.name = entry.get("name") or app.slug
     app.origins = list(entry.get("origins") or [])
     app.icon = (entry.get("icon") or None)
+    app.treat = "beer" if (entry.get("treat") or "").lower() == "beer" else "coffee"
     app.active = bool(entry.get("active", True))
     session.flush()
     return app

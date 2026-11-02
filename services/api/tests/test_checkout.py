@@ -155,7 +155,7 @@ def test_get_checkout_status(client):
         assert got.status_code == 200
         body = got.get_json()
         assert body["id"] == row_id and body["status"] == "open" and body["kind"] == "donation"
-        assert body["app"] == {"slug": "retro", "name": "Retro", "icon": "https://payments.3m4.net/icons/retro.png"}
+        assert body["app"] == {"slug": "retro", "name": "Retro", "icon": "https://payments.3m4.net/icons/retro.png", "treat": "coffee"}
         assert body["amount"] == 500 and body["currency"] == "usd"
         assert body["return_to"] == "https://retro.3m4.net/x" and body["opener_origin"] == "https://retro.3m4.net"
         assert body["needs_claim"] is False and body["claimed"] is False and body["entitlements"] == []

@@ -13,7 +13,7 @@ def test_catalog_for_retro(client):
     resp = client.get("/api/catalog?app=retro")
     assert resp.status_code == 200, resp.get_json()
     body = resp.get_json()
-    assert body["app"] == {"slug": "retro", "name": "Retro", "icon": "https://payments.3m4.net/icons/retro.png"}
+    assert body["app"] == {"slug": "retro", "name": "Retro", "icon": "https://payments.3m4.net/icons/retro.png", "treat": "coffee"}
     assert body["currencies"] == ["usd", "mxn", "eur"]
     assert body["default_currency"] == "usd"
     assert body["donation"]["min"] == {"usd": 200, "mxn": 2500, "eur": 200}

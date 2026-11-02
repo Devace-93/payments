@@ -4,7 +4,7 @@ import { api, ApiRequestError, loginUrl, signupUrl } from "../../../lib/api";
 import { formatAmount } from "../../../lib/currency";
 import { isAllowedReturn } from "../../../lib/returnTo";
 import { capture } from "../../../lib/analytics";
-import type { Checkout } from "../../../lib/types";
+import { treatOf, type Checkout } from "../../../lib/types";
 import { AppIcon } from "../../../components/app-icon";
 import { tr, trError, useI18n } from "../../../i18n";
 
@@ -163,7 +163,9 @@ export default component$(() => {
       ) : (
         <>
           <h1 class="mt-4 text-2xl font-bold text-slate-900">{tr(i18n, "pay.thanksTitle")}</h1>
-          <p class="mt-2 text-sm text-slate-600">{tr(i18n, "pay.thanksDonation", { amount, app: name })}</p>
+          <p class="mt-2 text-sm text-slate-600" data-testid="thanks">
+            {tr(i18n, `pay.treat.${treatOf(c?.app)}.thanks`, { amount, app: name })}
+          </p>
           {c?.needs_claim && !c.claimed ? (
             <>
               <p class="mt-2 text-sm text-slate-500" data-testid="claim-explainer">

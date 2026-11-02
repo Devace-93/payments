@@ -7,7 +7,6 @@ export const pay = {
   "pay.yourSupport": "Your support",
   "pay.yourSupportHint": "Receipts, subscriptions and your badge.",
   "pay.catalogDonate": "Donate",
-  "pay.catalogDonateBody": "A one-time coffee for {app}. No account needed.",
   "pay.catalogPlans": "Plans",
   "pay.catalogSubscribe": "Subscribe",
   "pay.noProducts": "{app} has no plans yet — donations keep it going.",
@@ -17,7 +16,13 @@ export const pay = {
 
   // Donate
   "pay.donateTitle": "Support {app}",
-  "pay.donateSubtitle": "Buy Enrique a coffee. Paid by card through Stripe — no account needed.",
+  // Treat wording (app.treat from the catalog / checkout: "coffee" | "beer")
+  "pay.treat.coffee.title": "Buy Enrique a coffee ☕",
+  "pay.treat.coffee.lede": "A one-time coffee for {app}. Paid by card through Stripe — no account needed.",
+  "pay.treat.coffee.thanks": "Your {amount} coffee for {app} went through ☕",
+  "pay.treat.beer.title": "Buy Enrique a beer 🍺",
+  "pay.treat.beer.lede": "A one-time beer for {app}. Paid by card through Stripe — no account needed.",
+  "pay.treat.beer.thanks": "Your {amount} beer for {app} went through 🍺",
   "pay.donatingAs": "Donating as @{handle}",
   "pay.amount": "Amount",
   "pay.customAmount": "Other amount",
@@ -51,7 +56,6 @@ export const pay = {
   "pay.successPending": "Still waiting for Stripe",
   "pay.successPendingBody": "Your payment is on its way. Check your email for the receipt, or come back in a minute.",
   "pay.thanksTitle": "Thank you!",
-  "pay.thanksDonation": "Your {amount} donation to {app} went through.",
   "pay.thanksGuestBody": "We emailed you a receipt with a claim code. Create an account or log in to attach this donation to it and get your supporter badge.",
   "pay.thanksUserBody": "It is already on your support page.",
   "pay.createAccount": "Create an account",

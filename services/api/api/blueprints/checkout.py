@@ -252,7 +252,7 @@ def get_checkout(raw_id: str):
             "status": row.status,
             "kind": row.kind,
             "price": product.key if product else None,
-            "app": {"slug": app.slug, "name": app.name, "icon": app.icon},
+            "app": {"slug": app.slug, "name": app.name, "icon": app.icon, "treat": app.treat},
             "amount": row.amount,
             "currency": row.currency,
             "return_to": row.return_to,

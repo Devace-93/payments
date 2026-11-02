@@ -4,7 +4,8 @@ import type { PartialCatalog } from "./en";
 const esES: PartialCatalog = {
   "pay.amount": "Importe",
   "pay.customAmount": "Otro importe",
-  "pay.donateSubtitle": "Invita a Enrique a un café. Se paga con tarjeta a través de Stripe; no necesitas cuenta.",
+  "pay.treat.coffee.title": "Invita a Enrique a un café ☕",
+  "pay.treat.beer.title": "Invita a Enrique a una cerveza 🍺",
   "pay.err.amount_too_large": "Ese importe supera el máximo.",
   "pay.alreadySubscribedCta": "Gestionar tu suscripción",
   "pay.manage": "Gestionar",

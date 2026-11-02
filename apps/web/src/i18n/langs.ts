@@ -59,15 +59,40 @@ export function isRtl(code: string): boolean {
   return RTL_LANGS.includes(baseOf(code));
 }
 
+/**
+ * Validate a locale code against LANGS: an exact match wins, then a prefix
+ * match (`es` → `es-MX`, the first entry of that language), then the base
+ * language of an unknown country variant (`es-XX` → `es-MX`). `null` when
+ * nothing matches — callers fall through to the next source.
+ */
+export function matchLang(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const c = code.trim();
+  if (c.length < 2) return null;
+  if (LANGS.some((l) => l.code === c)) return c;
+  const prefixed = LANGS.find((l) => l.code.startsWith(c));
+  if (prefixed) return prefixed.code;
+  const base = baseOf(c).toLowerCase();
+  return LANGS.find((l) => baseOf(l.code) === base)?.code ?? null;
+}
+
 /** Pick the active locale from a saved value and the browser language. */
 export function resolveLang(saved: string | null, navigatorLang: string | undefined): string {
-  if (saved) {
-    if (LANGS.some((l) => l.code === saved)) return saved;
-    const migrated = LANGS.find((l) => l.code.startsWith(saved));
-    if (migrated) return migrated.code;
+  return matchLang(saved) ?? matchLang(navigatorLang) ?? DEFAULT_LANG;
+}
+
+/**
+ * The viewer's current locale outside the i18n store (URL builders in
+ * lib/api.ts): the persisted choice, else what the page is rendered in.
+ * `null` on the server.
+ */
+export function currentLang(): string | null {
+  if (typeof document === "undefined") return null;
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(LANG_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
   }
-  const nav = navigatorLang || DEFAULT_LANG;
-  if (LANGS.some((l) => l.code === nav)) return nav;
-  const base = baseOf(nav);
-  return LANGS.find((l) => l.code.startsWith(base))?.code ?? DEFAULT_LANG;
+  return matchLang(saved) ?? matchLang(document.documentElement.lang);
 }

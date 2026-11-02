@@ -58,6 +58,8 @@ class App(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     origins: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     icon: Mapped[str | None] = mapped_column(String(500))
+    # Donation wording on the portal: "coffee" (default) or "beer".
+    treat: Mapped[str] = mapped_column(String(16), nullable=False, default="coffee", server_default="coffee")
     # Per-app "Support <app>" Stripe product, created lazily on the first donation.
     stripe_donation_product_id: Mapped[str | None] = mapped_column(String(64))
     webhook_url: Mapped[str | None] = mapped_column(String(2000))

@@ -62,7 +62,7 @@ export default component$(() => {
               >
                 <span class="truncate">@{session.handle}</span>
               </Link>
-              <a href={logoutUrl(here)} class="btn-ghost h-9" data-testid="nav-logout">
+              <a href={logoutUrl(here, i18n.lang)} class="btn-ghost h-9" data-testid="nav-logout">
                 {tr(i18n, "nav.logout")}
               </a>
             </>
@@ -74,10 +74,10 @@ export default component$(() => {
                   {tr(i18n, "nav.me")}
                 </Link>
               )}
-              <a href={loginUrl(here)} class="btn-ghost h-9" data-testid="nav-login">
+              <a href={loginUrl(here, i18n.lang)} class="btn-ghost h-9" data-testid="nav-login">
                 {tr(i18n, "nav.login")}
               </a>
-              <a href={signupUrl(here)} class="btn-secondary h-9" data-testid="nav-signup">
+              <a href={signupUrl(here, i18n.lang)} class="btn-secondary h-9" data-testid="nav-signup">
                 {tr(i18n, "nav.signup")}
               </a>
             </>

@@ -8,11 +8,14 @@
  *   store updates, re-rendering every `tr()` call site.
  * - Resolution per key: country variant → base language → English.
  * - Preferences persist in localStorage (`3m4.lang`), same key as the other
- *   3m4 apps so the choice carries across them.
+ *   3m4 apps. localStorage is per origin, so the choice does not travel by
+ *   itself: pay.js opens the portal with `?lang=<locale>` (the host site's
+ *   `3m4.lang`), which wins over the saved value and is persisted here; the
+ *   accounts links (lib/api.ts) carry it onward the same way.
  */
 import { createContextId, useContext } from "@builder.io/qwik";
 import en, { type CatalogKey, type PartialCatalog } from "./catalog/en";
-import { baseOf, DEFAULT_LANG, isRtl, LANG_STORAGE_KEY, resolveLang } from "./langs";
+import { baseOf, DEFAULT_LANG, isRtl, LANG_STORAGE_KEY, matchLang, resolveLang } from "./langs";
 
 export interface I18nState {
   lang: string;
@@ -47,8 +50,27 @@ function applyDocumentLang(lang: string): void {
   document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
 }
 
-/** Resolve the locale on the client and load its catalog into the store. */
+/** `?lang=` of the current page, validated against LANGS (`null` when absent or unknown). */
+function langFromQuery(): string | null {
+  if (typeof location === "undefined") return null;
+  try {
+    return matchLang(new URLSearchParams(location.search).get("lang"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the locale on the client and load its catalog into the store:
+ * 1. `?lang=` (handed over by another 3m4 site) — persisted to `3m4.lang`,
+ * 2. the saved `3m4.lang`, 3. `navigator.language`, 4. English.
+ */
 export async function initI18n(store: I18nState): Promise<void> {
+  const fromQuery = langFromQuery();
+  if (fromQuery) {
+    await setLang(store, fromQuery, true);
+    return;
+  }
   let saved: string | null = null;
   try {
     saved = localStorage.getItem(LANG_STORAGE_KEY);

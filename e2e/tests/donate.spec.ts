@@ -11,7 +11,9 @@ test.describe("donate", () => {
   test("renders presets and currency for the app @critical", async ({ page }) => {
     const cat = await catalog(page.request, "3m4");
     await page.goto("/donate?app=3m4&currency=usd");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(cat.app.name);
+    // Heading = the app's treat ("Buy Enrique a coffee ☕" / "… a beer 🍺"); the lede names the app.
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/☕|🍺/);
+    await expect(page.getByTestId("donate-lede")).toContainText(cat.app.name);
     await expect(page.getByTestId("currency")).toHaveValue("usd");
     await expect(page.getByTestId("preset")).toHaveCount(cat.donation.presets.usd.length);
     // Guest: the claim explanation is shown; a GitHub Sponsors button only when configured.
