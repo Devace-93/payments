@@ -195,7 +195,7 @@ Success page posts `{type:"m4pay:complete", kind, app, entitlements}` to
 <script src="https://payments.3m4.net/pay.js" data-app="retro" data-kind="subscribe"
         data-price="pro_monthly" data-return-to="https://retro.3m4.net/dashboard/billing" defer></script>
 ```
-One button per tag (`data-mount` or inserted after the script). Opens
+One button per tag (`data-mount` or inserted after the script). The button mounts only when `GET /api/features` (credentials) says the matching switch is on for the viewer. Opens
 `window.open(url, "m4pay", "popup,width=480,height=780")`; popup blocked →
 `location.assign(url)`. Accepts `message` events only from the payments origin
 and `data.type === "m4pay:complete"`; dispatches `window` CustomEvent

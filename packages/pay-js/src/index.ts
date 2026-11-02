@@ -107,6 +107,24 @@ const CSS = `
         }
       };
 
+      // Gated rollout: the paying switches are evaluated per viewer by the
+      // portal (PostHog distinct_id = the accounts sub). One request per page;
+      // a failed request hides the buttons rather than showing a dead end.
+      let featuresPromise: Promise<Record<string, boolean>> | null = null;
+      const features = (): Promise<Record<string, boolean>> => {
+        if (!featuresPromise) {
+          featuresPromise = fetch(`${origin}/api/features`, { credentials: "include" })
+            .then((r) => (r.ok ? (r.json() as Promise<{ features?: Record<string, boolean> }>) : {}))
+            .then((d: { features?: Record<string, boolean> }) => d.features || {})
+            .catch(() => ({}) as Record<string, boolean>);
+        }
+        return featuresPromise;
+      };
+      const allowed = async (kind: "donate" | "subscribe"): Promise<boolean> => {
+        const f = await features();
+        return !!f[kind === "donate" ? "donations" : "subscriptions"];
+      };
+
       const paid = (detail: PaidDetail) => {
         try {
           window.dispatchEvent(new CustomEvent("m4pay:paid", { detail }));
@@ -195,8 +213,9 @@ const CSS = `
       const style = document.createElement("style");
       style.textContent = CSS;
       document.head.appendChild(style);
+      (api as unknown as { _allowed: typeof allowed })._allowed = allowed;
       return api;
-    })() as M4Pay & { _t: typeof STRINGS.en; _dark: () => boolean };
+    })() as M4Pay & { _t: typeof STRINGS.en; _dark: () => boolean; _allowed: (kind: "donate" | "subscribe") => Promise<boolean> };
 
     // ---- this tag's button -------------------------------------------------
     const d = script.dataset;
@@ -241,8 +260,13 @@ const CSS = `
         /* ignore */
       }
     };
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
-    else mount();
+    const mountWhenAllowed = () => {
+      shared._allowed(kind).then((ok) => {
+        if (ok) mount();
+      });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountWhenAllowed);
+    else mountWhenAllowed();
 
     window.addEventListener("storage", (e) => {
       if (e.key === "3m4.lang" || e.key === "3m4.theme") render();

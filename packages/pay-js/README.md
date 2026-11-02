@@ -27,6 +27,10 @@ the payments web service at `https://payments.3m4.net/pay.js` (CORS `*`,
 | `data-lang` | forwarded to the donate page (default from `3m4.lang`) |
 
 - One button per tag; every tag shares one `window.m4pay = { open, entitlements, origin }`.
+- Gated rollout: on load the script asks the portal `GET /api/features` (with
+  the viewer's cookie) and only mounts the button when the matching switch
+  (`donations` / `subscriptions`) is on for that viewer; otherwise the mount
+  stays empty, so host pages must not depend on the button being there.
 - Click → popup `window.open(url, "m4pay", "popup,width=480,height=780")`; when
   the popup is blocked the page navigates to the hosted page instead
   (`return_to` brings the user back).
