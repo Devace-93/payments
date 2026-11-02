@@ -295,3 +295,33 @@ def test_subscription_started_mail_from_checkout(client):
     # seed-completed style replay via the same handler is a no-op for the mail
     assert post_event(client, "checkout.session.completed", cs).get_json() == {"status": "subscription"}
     assert len(outbox_rows(kind="email")) == 1
+
+
+def test_invoice_paid_before_subscription_created(client, monkeypatch):
+    """Stripe often delivers ``invoice.paid`` before ``customer.subscription.created``.
+    In real mode the handler builds the mirror row from Stripe's current
+    subscription instead of dropping the invoice."""
+    from api import stripe_events as se
+
+    set_webhook("retro")
+    identity = make_identity()
+    now = int(time.time())
+    sub = sub_object("sub_first", identity["sub"], now=now)
+    monkeypatch.setattr(se, "is_fake", lambda _stripe: False)
+    monkeypatch.setattr(se, "_retrieve_subscription", lambda _stripe, sid: sub if sid == "sub_first" else None)
+    inv = {
+        "id": "in_first", "object": "invoice", "amount_paid": 500, "currency": "usd",
+        "customer_email": identity["email"], "payment_intent": "pi_first",
+        "parent": {"subscription_details": {"subscription": "sub_first"}}, "billing_reason": "subscription_create",
+    }
+    with session_scope() as session:
+        assert se.handle_invoice_paid(session, object(), inv) == "invoice"
+    with session_scope() as session:
+        row = session.scalar(select(Subscription).where(Subscription.stripe_subscription_id == "sub_first"))
+        assert row is not None and row.entitlement == "pro" and str(row.identity_id) == identity["sub"]
+        pay = session.scalar(select(Payment).where(Payment.stripe_invoice_id == "in_first"))
+        assert pay is not None and pay.kind == "invoice" and pay.subscription_id == row.id
+    # a later subscription.created event is a no-op upsert, not a duplicate row
+    assert post_event(client, "customer.subscription.created", sub, created=now + 1).status_code == 200
+    with session_scope() as session:
+        assert session.scalar(select(Subscription).where(Subscription.stripe_subscription_id == "sub_first").with_only_columns(Subscription.id)) is not None

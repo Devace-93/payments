@@ -367,12 +367,24 @@ def handle_invoice_paid(session, stripe, invoice: dict) -> str:
     if not sub_id:
         return "no_subscription"
     row = session.scalar(select(Subscription).where(Subscription.stripe_subscription_id == sub_id))
+    fresh = _retrieve_subscription(stripe, sub_id) if not is_fake(stripe) else None
     if row is None:
-        return "unknown_subscription"
-    if not is_fake(stripe):
-        fresh = _retrieve_subscription(stripe, sub_id)
-        if fresh:
-            upsert_subscription(session, fresh)
+        # ``invoice.paid`` often arrives before ``customer.subscription.created``:
+        # build the mirror row from Stripe's current object instead of dropping
+        # the invoice (the later subscription event still sends mail + push).
+        if not fresh:
+            return "unknown_subscription"
+        identity_id = _uuid((fresh.get("metadata") or {}).get("identity_id"))
+        if identity_id is None:
+            return "unknown_subscription"
+        _ensure_customer(session, identity_id, email=invoice.get("customer_email"),
+                         stripe_customer_id=_id(fresh.get("customer")))
+        try:
+            row, _ = upsert_subscription(session, fresh, identity_id=identity_id)
+        except ValueError:
+            return "unknown_subscription"
+    elif fresh:
+        upsert_subscription(session, fresh)
     amount = int(invoice.get("amount_paid") or 0)
     if amount <= 0:
         return "zero_invoice"
