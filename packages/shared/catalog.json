@@ -65,6 +65,17 @@
       "treat": "coffee"
     },
     {
+      "slug": "bootpick",
+      "name": "bootpick",
+      "origins": [
+        "https://bootpick.3m4.net",
+        "http://localhost:*"
+      ],
+      "products": [],
+      "icon": "https://payments.3m4.net/icons/bootpick.png",
+      "treat": "beer"
+    },
+    {
       "slug": "mousetouch",
       "name": "MouseTouch",
       "origins": [
