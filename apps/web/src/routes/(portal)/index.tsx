@@ -18,6 +18,7 @@ export const useSessionHint = routeLoader$(({ cookie }) => cookie.has("3m4_sessi
 /** Mirrors packages/shared/catalog.json (slugs the API knows). */
 const KNOWN_APPS: { slug: string; name: string; url: string }[] = [
   { slug: "3m4", name: "3m4", url: "https://3m4.net" },
+  { slug: "bootpick", name: "bootpick", url: "https://bootpick.3m4.net" },
   { slug: "info", name: "3m4 info", url: "https://info.3m4.net" },
   { slug: "mousetouch", name: "MouseTouch", url: "https://mouse.3m4.net" },
   { slug: "retro", name: "Retro", url: "https://retro.3m4.net" },
