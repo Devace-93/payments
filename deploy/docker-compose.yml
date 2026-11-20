@@ -65,7 +65,13 @@ services:
     # Also on the shared `edge` network (created by `make up`), so the API can
     # fetch the accounts JWKS at http://accounts-api-1:5000/.well-known/jwks.json
     # and push webhooks to the sibling stacks, exactly as in production.
-    networks: [default, edge]
+    # `payments-api` is this stack's own name for the API. The bare service name `api`
+    # is also registered on the shared `edge` network by every sibling app, so
+    # resolving it there can return another app's API.
+    networks:
+      default:
+        aliases: [payments-api]
+      edge: {}
     restart: unless-stopped
 
   # Outbox consumer: delivers mails and app webhooks the API queued (same image).
@@ -100,7 +106,7 @@ services:
     env_file: ../.env
     environment:
       # SSR resolves the feature switches straight from the API over the internal network.
-      API_INTERNAL_URL: http://api:5000/api
+      API_INTERNAL_URL: http://payments-api:5000/api
     expose: ["3000"]
     networks: [default, edge]
     restart: unless-stopped

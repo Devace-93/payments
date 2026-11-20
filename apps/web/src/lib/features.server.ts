@@ -4,7 +4,7 @@
  * The root layout resolves the public features while rendering so the first
  * paint already shows the right surfaces (no blank page, no gated-section
  * flash, and crawlers see real content). The API is reached directly over the
- * internal network via `API_INTERNAL_URL` (compose: http://api:5000/api); when
+ * internal network via `API_INTERNAL_URL` (compose: http://payments-api:5000/api); when
  * that is unset we fall back to an absolute `VITE_API_URL`, and when neither
  * is usable — or the API is slow/down — we return the registry defaults so
  * feature resolution can never take the site down.
