@@ -23,8 +23,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: root
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # Long enough to wait for the box-wide deploy lock below.
+          command_timeout: 60m
           script: |
             set -euo pipefail
+            # One deploy at a time on the box. Every app shares this lock, so
+            # simultaneous pushes to several repos queue up instead of building
+            # together and exhausting the memory (2026-11-18).
+            exec 9>/var/lock/box-deploy.lock
+            flock -w 2400 9
             cd /opt/payments
             git pull --ff-only
             cd deploy
